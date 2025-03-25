@@ -1,0 +1,29 @@
+name: 删除workflow，清理工作流
+on:
+  #定时触发开始编译(把下面两个#去掉开启,时间设置请看定时编译说明)
+  schedule:
+    - cron: 0 10 1 * *
+
+#分钟字段：0 表示在分钟为UTC时间为0的时候执行，既整点。
+#小时字段：10 表示在小时为UTC时间为10的时候执行。北京时间+8，既18点。
+#日期字段：1 日期，表示在每月的第几天执行。既第1天。
+#月份字段：* 表示月份，即 1 到 12 月都会匹配。
+#星期字段：* 表示匹配周几，如果指定了日期情况下，星期的设置在将不起实际作用。
+
+  workflow_dispatch:
+
+jobs:
+  del_workflow:
+    runs-on: Ubuntu-24.04
+    name: delete-workflow-runs
+    steps:
+    
+      - name: 删除workflow，清理工作流
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ secrets.REPO_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: 0
+#数据或操作记录的保留天数
+          keep_minimum_runs: 1
+#保留运行记录或实例的数量

@@ -1,2 +1,4 @@
-# Lede-autobuild
- 编译自己的Lede
+| 源码+版本 | 固件编译状态 | 脚本文件 | 固件下载 |
+| :-------------: | :-------------: | :-------------: | :-------------: |
+| [![](https://img.shields.io/badge/Lede-6.6-32C955.svg?logo=openwrt)](https://github.com/ranqingwen/Lede-autobuild/blob/main/.github/workflows/Lede_ranqw.yml) | [![](https://github.com/ranqingwen/Lede-autobuild/actions/workflows/Lede_ranqw.yml/badge.svg)](https://github.com/ranqingwen/Lede-autobuild/actions/workflows/Lede_ranqw.yml) | [![](https://img.shields.io/badge/脚本-配置-orange.svg?logo=apache-spark)](https://github.com/ranqingwen/Lede-autobuild/blob/main/build/Lede/diy-part.sh) | [![](https://img.shields.io/badge/下载-链接-blueviolet.svg?logo=hack-the-box)](https://github.com/ranqingwen/Lede-autobuild/releases) |
+| [![](https://img.shields.io/badge/主程序--32C955.svg?logo=openwrt)](https://github.com/ranqingwen/Lede-autobuild/blob/main/.github/workflows/compile.yml) | [![](https://github.com/ranqingwen/Lede-autobuild/actions/workflows/compile.yml/badge.svg)](https://github.com/ranqingwen/Lede-autobuild/actions/workflows/compile.yml) | [![](https://img.shields.io/badge/脚本-配置-orange.svg?logo=apache-spark)]() | [![](https://img.shields.io/badge/下载-链接-blueviolet.svg?logo=hack-the-box)](https://github.com/ranqingwen/Lede-autobuild/releases) |

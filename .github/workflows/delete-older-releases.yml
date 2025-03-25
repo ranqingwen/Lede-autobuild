@@ -1,0 +1,30 @@
+name: 删除releases，清理旧版本
+on:
+# 定时触发开启开始编译(把下面两个#去掉开启,时间设置请看定时开启编译说明)
+  schedule:
+    - cron: 0 9 * * 5
+
+#分钟字段：0 表示在分钟为UTC时间为0的时候执行，既整点。
+#小时字段：9 表示在小时为UTC时间为9的时候执行。北京时间+8既17点。
+#日期字段：* 日期，表示在每月的第几天执行。
+#月份字段：* 表示月份，即 1 到 12 月都会匹配。
+#星期字段：5 表示匹配周几，如果指定了日期情况下，星期的设置在将不起实际作用。此时为每周5
+
+  workflow_dispatch:
+
+jobs:
+  del_releases:
+    runs-on: Ubuntu-24.04
+    name: delete-releases-runs
+    steps:
+    
+      - name: 删除releases，清理旧版本
+        uses: dev-drprasad/delete-older-releases@v0.2.0
+        with:
+          repo: ${{ github.repository }}
+          keep_latest: 2
+#保留的版本数量
+          delete_tags: true
+#表示是否删除与被删除版本关联的标签
+        env:
+          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
