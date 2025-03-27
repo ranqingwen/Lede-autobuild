@@ -222,20 +222,20 @@ jobs:
       with:
         token: ${{ secrets.REPO_TOKEN }}
         repository: ${{ github.repository }}
-        retain_min: 2
+        retain_min: 1  ##保留的最小数量
     
-#    - name: 清理releases
-#      continue-on-error: true
-#      if: env.REPO_TOKEN
-#      uses: ophub/delete-releases-workflows@main
-#      with:
-#        delete_releases: true
-#      #releases_keep_keyword: targz/Update
-#        releases_keep_latest: 1
-#        delete_tags: true
-#        delete_workflows: true
-#        workflows_keep_day: 7
-#        gh_token: ${{ secrets.REPO_TOKEN }}
+    - name: 清理releases
+      continue-on-error: true
+      if: env.REPO_TOKEN
+      uses: ophub/delete-releases-workflows@main
+      with:
+        delete_releases: true
+        releases_keep_keyword: targz/Update
+        releases_keep_latest: ${{ env.KEEP_LATEST }}
+        delete_tags: true
+        delete_workflows: false
+        workflows_keep_day: 30
+        gh_token: ${{ secrets.REPO_TOKEN }}
         
     - name: 触发启动"${{ matrix.target }}"开始编译
       id: gitpush
