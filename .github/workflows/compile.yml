@@ -3,7 +3,7 @@
 #
 
 
-name: 主程序
+name: 编译主程序
 on:
   push:
     branches:
@@ -89,7 +89,7 @@ jobs:
         git clone -b "${REPO_BRANCH}" --single-branch "${REPO_URL}" openwrt
         ln -sf /${{ env.DIY_WORK }}/openwrt ${GITHUB_WORKSPACE}/openwrt
         cp -Rf ${GITHUB_WORKSPACE}/build ${GITHUB_WORKSPACE}/openwrt/build
-        chmod -R +x ${GITHUB_WORKSPACE}/openwrt/build
+        chmod -R +x ${GITHUB_WORKSPACE}/openwrt
     
     - name: 公 告
       run: |
@@ -177,21 +177,11 @@ jobs:
       if: steps.compile.outcome == 'success' && env.UPLOAD_RELEASE == 'true' && env.ING_FIRMWAR == 'true' && env.REPO_TOKEN
       uses: ncipollo/release-action@v1
       with:
-        name: ${{ env.SOURCE }}-${{ env.LUCI_EDITION }}
+        name: ${{ env.SOURCE }}-${{ env.PROMPT_TING }}
         tag: a${{ env.date }}
         token: ${{ secrets.REPO_TOKEN }}
         allowUpdates: true
-        body: |
-          ### 📒 固件信息
-          - 💄 LUCI版本：${{ env.LUCI_EDITION }}
-          - 🚀 内核版本：${{ env.LINUX_KERNEL }}
-          - 💻 平台架构：${{ env.TARGET_PROFILE }}
-          - 💝 源码分支：${{ env.REPO_BRANCH }}
-          - 🌐 默认地址：192.168.23.250
-          - 🔑 默认密码：空
-          - 🔴 固件大小：Kernel=32M，rootfs=968M
-          - 🌻 固件源码：${{ env.REPO_URL }}
-          - 🧊 更新时间：${{ env.date }}
+        body: ${{ env.Tongzhi_Date }}
         artifacts: "${{ env.FIRMWARE_PATH }}/*"
         
     - name: 发送[在线更新固件]至云端1
@@ -203,17 +193,7 @@ jobs:
         tag: ${{ env.Update_tag }}
         token: ${{ secrets.REPO_TOKEN }}
         allowUpdates: true
-        body: |
-          ### 📒 固件信息
-          - 💄 LUCI版本：${{ env.LUCI_EDITION }}
-          - 🚀 内核版本：${{ env.LINUX_KERNEL }}
-          - 💻 平台架构：${{ env.TARGET_PROFILE }}
-          - 💝 源码分支：${{ env.REPO_BRANCH }}
-          - 🌐 默认地址：192.168.23.250
-          - 🔑 默认密码：空
-          - 🔴 固件大小：Kernel=32M，rootfs=968M
-          - 🌻 固件源码：${{ env.REPO_URL }}
-          - 🧊 更新时间：${{ env.date }}
+        body: ${{ env.Tongzhi_Date }}
         artifacts: "${{ env.BIN_PATH }}/*"
         
     - name: 发送[在线更新固件]至云端2
@@ -230,33 +210,23 @@ jobs:
       if: steps.autoup.outcome == 'success' && env.UPDATE_FIRMWARE_ONLINE == 'true' && env.REPO_TOKEN
       uses: ncipollo/release-action@v1
       with:
-        name: AutoUpdate
+        name: AutoUpdate-${{ env.TARGET_BOARD }}
         tag: ${{ env.Update_tag }}
         token: ${{ secrets.REPO_TOKEN }}
         artifacts: "Github_Api/*"
         allowUpdates: true
-        body: |
-          ### 📒 固件信息
-          - 💄 LUCI版本：${{ env.LUCI_EDITION }}
-          - 🚀 内核版本：${{ env.LINUX_KERNEL }}
-          - 💻 平台架构：${{ env.TARGET_PROFILE }}
-          - 💝 源码分支：${{ env.REPO_BRANCH }}
-          - 🌐 默认地址：192.168.23.250
-          - 🔑 默认密码：空
-          - 🔴 固件大小：Kernel=32M，rootfs=968M
-          - 🌻 固件源码：${{ env.REPO_URL }}
-          - 🧊 更新时间：${{ env.date }}
+        body: ${{ env.Tongzhi_Date }}
 
     - name: Telegram或pushplus信息通知
       if: env.PUSH_PLUS_TOKEN && env.INFORMATION_NOTICE == 'PUSH' || env.TELEGRAM_BOT_TOKEN && env.INFORMATION_NOTICE == 'TG'
       run: |
         if [[ "${{ env.INFORMATION_NOTICE }}" == "TG" ]]; then
           if [[ "${{steps.compile.outcome}}" == 'success' ]]; then
-            curl -k --data chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" --data "text=✨您使用【${{matrix.target}}】文件夹编译【${REPO_BRANCH}分支的${{env.TARGET_PROFILE}}】固件顺利编译完成了✌️💯💐(${{env.WAREHOUSE_MAN}}仓库的#${{env.RUN_NUMBER}}号)！($(date +%Y年%m月%d号%H时%M分))" "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage"
+            curl -k --data chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" --data "text=我亲爱的✨主人✨：您使用【${{matrix.target}}】文件夹编译【${REPO_BRANCH}分支的${{env.TARGET_PROFILE}}】固件顺利编译完成了✌️💯💐(${{env.WAREHOUSE_MAN}}仓库的#${{env.RUN_NUMBER}}号)！($(date +%Y年%m月%d号%H时%M分))" "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage"
           fi
         fi
         if [[ "${{ env.INFORMATION_NOTICE }}" == "PUSH" ]]; then
           if [[ "${{steps.compile.outcome}}" == 'success' ]]; then
-            curl -k --data token="${{ secrets.PUSH_PLUS_TOKEN }}" --data title="[${{ env.SOURCE }}-${{ env.TARGET_PROFILE }}]编译成功" --data "content=✨您使用【${{matrix.target}}】文件夹编译【${REPO_BRANCH}分支的${{env.TARGET_PROFILE}}】固件顺利编译完成了✌️💯💐(${{env.WAREHOUSE_MAN}}仓库的#${{env.RUN_NUMBER}}号)！($(date +%Y年%m月%d号%H时%M分))" "http://www.pushplus.plus/send"
+            curl -k --data token="${{ secrets.PUSH_PLUS_TOKEN }}" --data title="[${{ env.SOURCE }}-${{ env.TARGET_PROFILE }}]编译成功" --data "content=我亲爱的✨主人✨：您使用【${{matrix.target}}】文件夹编译【${REPO_BRANCH}分支的${{env.TARGET_PROFILE}}】固件顺利编译完成了✌️💯💐(${{env.WAREHOUSE_MAN}}仓库的#${{env.RUN_NUMBER}}号)！($(date +%Y年%m月%d号%H时%M分))" "http://www.pushplus.plus/send"
           fi
         fi
