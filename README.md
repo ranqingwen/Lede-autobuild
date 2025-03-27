@@ -17,20 +17,20 @@
 - 🛑 如需要更改OpenWrt默认的IP，可以用root登录SSH下输入命令 vi /etc/config/network 修改文件；
 - 🛑 SSH界面也可输入 openwrt 打开系统快捷命令菜单
 
-  1. 在线更新固件或转换其他作者固件(zai xian sheng ji gu jian)
+1、在线更新固件或转换其他作者固件(zai xian sheng ji gu jian)
 
-  2. 修改后台IP和清空密码(xiu gai IP)
+2、修改后台IP和清空密码(xiu gai IP)
 
-  3. 清空密码(qing kong mi ma)
+3、清空密码(qing kong mi ma)
 
-  4. 重启系统(chong qi xi tong)
+4、重启系统(chong qi xi tong)
 
-  5. 恢复出厂设置(hui fu chu chang she zhi)
+5、恢复出厂设置(hui fu chu chang she zhi)
 
-  6. 退出(tui chu)
+6、退出(tui chu)
 
 
 ----
 - REPO_TOKEN密匙制作教程：https://git.io/jm.md
 - 云编译需要 [在此](https://github.com/settings/tokens) 创建个```token```,勾选：```repo```, ```workflow```，保存所得的key
-- 然后在此仓库```Settings```->```Secrets```中添加个名字为```GH_TOKEN```的Secret,填入token获得的key
+- 然后在此仓库```Settings```->```Secrets```中添加个名字为```REPO_TOKEN```的Secret,填入token获得的key
