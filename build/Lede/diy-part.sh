@@ -101,8 +101,6 @@ openwrt-x86-64-generic-ext4-combined.img.gz
 openwrt-x86-64-generic-ext4-combined-efi.img.gz
 openwrt-x86-64-generic-ext4-rootfs.img.gz
 openwrt-x86-64-generic-rootfs.tar.gz
-openwrt-x86-64-generic-squashfs-combined.vmdk
-openwrt-x86-64-generic-squashfs-combined-efi.vmdk
 EOF
 
 # 在线更新时，删除不想保留固件的某个文件，在EOF跟EOF之间加入删除代码，记住这里对应的是固件的文件路径，比如： rm -rf /etc/config/luci
