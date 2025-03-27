@@ -1,8 +1,8 @@
 name: 删除releases，清理旧版本
 on:
 # 定时触发开启开始编译(把下面两个#去掉开启,时间设置请看定时开启编译说明)
-  schedule:
-    - cron: 0 9 * * 5
+#  schedule:
+#    - cron: 0 9 * * 5
 
 #分钟字段：0 表示在分钟为UTC时间为0的时候执行，既整点。
 #小时字段：9 表示在小时为UTC时间为9的时候执行。北京时间+8既17点。
@@ -26,5 +26,7 @@ jobs:
 #保留的版本数量
           delete_tags: true
 #表示是否删除与被删除版本关联的标签
+        delete_workflows: false
+#关闭删除工作流运行记录的功能，即不会对工作流运行记录进行删除操作
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
