@@ -188,9 +188,9 @@ jobs:
           - 💻 平台架构：${{ env.TARGET_PROFILE }}
           - 🌻 源码作者：${{ env.SOURCE_OWNER }}
           - 💝 源码分支：${{ env.REPO_BRANCH }}
-          - 🌐 默认地址：192.168.23.254
+          - 🌐 默认地址：${{ env.Ipv4_ipaddr }}
           - 🔑 默认密码：空
-          - 🔴 固件大小：Kernel=32M，rootfs=968M
+          - 🔴 固件大小：Kernel=${{ env.Kernel_partition_size }}，rootfs=${{ env.Rootfs_partition_size }}
           - 🧊 编译时间：${{ env.Compte_Date }}
         artifacts: "${{ env.FIRMWARE_PATH }}/*"
         
@@ -210,9 +210,9 @@ jobs:
           - 💻 平台架构：${{ env.TARGET_PROFILE }}
           - 🌻 源码作者：${{ env.SOURCE_OWNER }}
           - 💝 源码分支：${{ env.REPO_BRANCH }}
-          - 🌐 默认地址：192.168.23.254
+          - 🌐 默认地址：${{ env.Ipv4_ipaddr }}
           - 🔑 默认密码：空
-          - 🔴 固件大小：Kernel=32M，rootfs=968M
+          - 🔴 固件大小：Kernel=${{ env.Kernel_partition_size }}，rootfs=${{ env.Rootfs_partition_size }}
           - 🧊 编译时间：${{ env.Compte_Date }}
         artifacts: "${{ env.BIN_PATH }}/*"
         
@@ -242,9 +242,9 @@ jobs:
           - 💻 平台架构：${{ env.TARGET_PROFILE }}
           - 🌻 源码作者：${{ env.SOURCE_OWNER }}
           - 💝 源码分支：${{ env.REPO_BRANCH }}
-          - 🌐 默认地址：192.168.23.254
+          - 🌐 默认地址：${{ env.Ipv4_ipaddr }}
           - 🔑 默认密码：空
-          - 🔴 固件大小：Kernel=32M，rootfs=968M
+          - 🔴 固件大小：Kernel=${{ env.Kernel_partition_size }}，rootfs=${{ env.Rootfs_partition_size }}
           - 🧊 编译时间：${{ env.Compte_Date }}
 
     - name: Telegram或pushplus信息通知
