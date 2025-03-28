@@ -37,9 +37,6 @@ export OpenClash_Core="1"                   # 增加OpenClash时,把核心下载
 # 个性签名,默认增加年月日[$(TZ=UTC-8 date "+%Y.%m.%d")]
 export Customized_Information="Lede by ranqw $(TZ=UTC-8 date "+%Y.%m.%d")"  # 个性签名,你想写啥就写啥，(填0为不作修改)
 
-# 修改右下角脚本版本信息
-sed -i 's|<a href="https://github.com/jerrykuku/luci-theme-argon" target="_blank">ArgonTheme <%# vPKG_VERSION %></a>|<a class="luci-link" href="https://github.com/ranqingwen/Lede-autobuild/releases" target="_blank">下载最新版</a>|' package/luci-theme-argon/luasrc/view/themes/argon/footer.htm
-
 # 更换固件内核
 export Replace_Kernel="0"                  # 更换内核版本,在对应源码的[target/linux/架构]查看patches-x.x,看看x.x有啥就有啥内核了(填入内核x.x版本号,填0为不作修改)
 
