@@ -177,7 +177,7 @@ jobs:
       if: steps.compile.outcome == 'success' && env.UPLOAD_RELEASE == 'true' && env.ING_FIRMWAR == 'true' && env.REPO_TOKEN
       uses: ncipollo/release-action@v1
       with:
-        name: ${{ env.SOURCE }}-${{ env.LUCI_EDITION }}
+        name: ${{ env.SOURCE }}-${{ env.LUCI_EDITION }}-${{ env.Gujian_Date }}
         tag: a${{ env.date }}
         token: ${{ secrets.REPO_TOKEN }}
         allowUpdates: true
@@ -186,12 +186,12 @@ jobs:
           - 💄 LUCI版本：${{ env.LUCI_EDITION }}
           - 🚀 内核版本：${{ env.LINUX_KERNEL }}
           - 💻 平台架构：${{ env.TARGET_PROFILE }}
+          - 🌻 源码作者：${{ env.SOURCE_OWNER }}
           - 💝 源码分支：${{ env.REPO_BRANCH }}
           - 🌐 默认地址：192.168.23.254
           - 🔑 默认密码：空
           - 🔴 固件大小：Kernel=32M，rootfs=968M
-          - 🌻 固件源码：${{ env.REPO_URL }}
-          - 🧊 更新时间：${{ env.date }}
+          - 🧊 编译时间：${{ env.Compte_Date }}
         artifacts: "${{ env.FIRMWARE_PATH }}/*"
         
     - name: 发送[在线更新固件]至云端1
@@ -208,12 +208,12 @@ jobs:
           - 💄 LUCI版本：${{ env.LUCI_EDITION }}
           - 🚀 内核版本：${{ env.LINUX_KERNEL }}
           - 💻 平台架构：${{ env.TARGET_PROFILE }}
+          - 🌻 源码作者：${{ env.SOURCE_OWNER }}
           - 💝 源码分支：${{ env.REPO_BRANCH }}
           - 🌐 默认地址：192.168.23.254
           - 🔑 默认密码：空
           - 🔴 固件大小：Kernel=32M，rootfs=968M
-          - 🌻 固件源码：${{ env.REPO_URL }}
-          - 🧊 更新时间：${{ env.date }}
+          - 🧊 编译时间：${{ env.Compte_Date }}
         artifacts: "${{ env.BIN_PATH }}/*"
         
     - name: 发送[在线更新固件]至云端2
@@ -240,12 +240,12 @@ jobs:
           - 💄 LUCI版本：${{ env.LUCI_EDITION }}
           - 🚀 内核版本：${{ env.LINUX_KERNEL }}
           - 💻 平台架构：${{ env.TARGET_PROFILE }}
+          - 🌻 源码作者：${{ env.SOURCE_OWNER }}
           - 💝 源码分支：${{ env.REPO_BRANCH }}
           - 🌐 默认地址：192.168.23.254
           - 🔑 默认密码：空
           - 🔴 固件大小：Kernel=32M，rootfs=968M
-          - 🌻 固件源码：${{ env.REPO_URL }}
-          - 🧊 更新时间：${{ env.date }}
+          - 🧊 编译时间：${{ env.Compte_Date }}
 
     - name: Telegram或pushplus信息通知
       if: env.PUSH_PLUS_TOKEN && env.INFORMATION_NOTICE == 'PUSH' || env.TELEGRAM_BOT_TOKEN && env.INFORMATION_NOTICE == 'TG'
