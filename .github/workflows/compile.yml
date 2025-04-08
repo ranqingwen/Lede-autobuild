@@ -3,13 +3,13 @@
 #
 
 
-name: 编译主程序
+name: 主程序
 on:
   push:
     branches:
       - main
     paths:
-      - 'bconfig'
+      - 'build/Lede/relevance/start'
 
 env:
   GITHUB_LINK: https://github.com/${{github.repository}}
@@ -34,7 +34,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [Immortalwrt]
+        target: [Lede]
 
     steps:    
     - name: 准备结束
@@ -50,6 +50,16 @@ jobs:
           source ${GITHUB_WORKSPACE}/build/${FOLDER_NAME}/relevance/settings.ini
         fi
         source ${GITHUB_WORKSPACE}/build/${{ env.FOLDER_NAME }}/common.sh && Diy_menu1
+
+    - name: 清理因转换CPU而停止的工作流程
+      run: |
+        cd ${GITHUB_WORKSPACE}
+        source build/${FOLDER_NAME}/common.sh && Diy_delruns
+
+    - name: CPU检测
+      run: |
+        cd ${GITHUB_WORKSPACE}
+        source build/${FOLDER_NAME}/common.sh && CPU_Priority
 
     - name: 释放Ubuntu磁盘空间
       uses: endersonmenezes/free-disk-space@v2
@@ -79,7 +89,7 @@ jobs:
         git clone -b "${REPO_BRANCH}" --single-branch "${REPO_URL}" openwrt
         ln -sf /${{ env.DIY_WORK }}/openwrt ${GITHUB_WORKSPACE}/openwrt
         cp -Rf ${GITHUB_WORKSPACE}/build ${GITHUB_WORKSPACE}/openwrt/build
-        chmod -R +x ${GITHUB_WORKSPACE}/openwrt
+        chmod -R +x ${GITHUB_WORKSPACE}/openwrt/build
     
     - name: 公 告
       run: |
@@ -137,9 +147,9 @@ jobs:
         echo "date=$(date "+%Y%m%d%H%M%S")" >> ${GITHUB_ENV}
         source ${BUILD_PATH}/common.sh && firmware_jiance
         
-    - name: 自动打包aarch64系列固件
+    - name: 自动打包Amlogic_Rockchip系列固件
       if: steps.compile.outcome == 'success' && env.PACKAGING_FIRMWARE == 'true'
-      uses: ncipollo/release-action@v1
+      uses: ncipollo/release-action@main
       with:
         name: rootfs.tar.gz
         tag: targz
@@ -167,11 +177,21 @@ jobs:
       if: steps.compile.outcome == 'success' && env.UPLOAD_RELEASE == 'true' && env.ING_FIRMWAR == 'true' && env.REPO_TOKEN
       uses: ncipollo/release-action@v1
       with:
-        name: ${{ env.SOURCE }}-${{ env.PROMPT_TING }}
+        name: ${{ env.SOURCE }}-${{ env.Tongzhi_Date }}
         tag: a${{ env.date }}
         token: ${{ secrets.REPO_TOKEN }}
         allowUpdates: true
-        body: ${{ env.Tongzhi_Date }}
+        body: |
+          ### 📒 固件信息
+          - 💄 LUCI版本：${{ env.LUCI_EDITION }}
+          - 🚀 内核版本：${{ env.LINUX_KERNEL }}
+          - 💻 平台架构：${{ env.TARGET_PROFILE }}
+          - 🌻 源码作者：${{ env.SOURCE_OWNER }}
+          - 💝 源码分支：${{ env.REPO_BRANCH }}
+          - 🌐 默认地址：${{ env.Ipv4_ipaddr }}
+          - 🔑 默认密码：空
+          - 🔴 固件大小：Kernel=${{ env.Kernel_partition_size }}，rootfs=${{ env.Rootfs_partition_size }}
+          - 🧊 编译时间：${{ env.Compte_Date }}
         artifacts: "${{ env.FIRMWARE_PATH }}/*"
         
     - name: 发送[在线更新固件]至云端1
@@ -183,7 +203,17 @@ jobs:
         tag: ${{ env.Update_tag }}
         token: ${{ secrets.REPO_TOKEN }}
         allowUpdates: true
-        body: ${{ env.Tongzhi_Date }}
+        body: |
+          ### 📒 固件信息
+          - 💄 LUCI版本：${{ env.LUCI_EDITION }}
+          - 🚀 内核版本：${{ env.LINUX_KERNEL }}
+          - 💻 平台架构：${{ env.TARGET_PROFILE }}
+          - 🌻 源码作者：${{ env.SOURCE_OWNER }}
+          - 💝 源码分支：${{ env.REPO_BRANCH }}
+          - 🌐 默认地址：${{ env.Ipv4_ipaddr }}
+          - 🔑 默认密码：空
+          - 🔴 固件大小：Kernel=${{ env.Kernel_partition_size }}，rootfs=${{ env.Rootfs_partition_size }}
+          - 🧊 编译时间：${{ env.Compte_Date }}
         artifacts: "${{ env.BIN_PATH }}/*"
         
     - name: 发送[在线更新固件]至云端2
@@ -200,23 +230,33 @@ jobs:
       if: steps.autoup.outcome == 'success' && env.UPDATE_FIRMWARE_ONLINE == 'true' && env.REPO_TOKEN
       uses: ncipollo/release-action@v1
       with:
-        name: AutoUpdate-${{ env.TARGET_BOARD }}
+        name: AutoUpdate
         tag: ${{ env.Update_tag }}
         token: ${{ secrets.REPO_TOKEN }}
         artifacts: "Github_Api/*"
         allowUpdates: true
-        body: ${{ env.Tongzhi_Date }}
+        body: |
+          ### 📒 固件信息
+          - 💄 LUCI版本：${{ env.LUCI_EDITION }}
+          - 🚀 内核版本：${{ env.LINUX_KERNEL }}
+          - 💻 平台架构：${{ env.TARGET_PROFILE }}
+          - 🌻 源码作者：${{ env.SOURCE_OWNER }}
+          - 💝 源码分支：${{ env.REPO_BRANCH }}
+          - 🌐 默认地址：${{ env.Ipv4_ipaddr }}
+          - 🔑 默认密码：空
+          - 🔴 固件大小：Kernel=${{ env.Kernel_partition_size }}，rootfs=${{ env.Rootfs_partition_size }}
+          - 🧊 编译时间：${{ env.Compte_Date }}
 
     - name: Telegram或pushplus信息通知
       if: env.PUSH_PLUS_TOKEN && env.INFORMATION_NOTICE == 'PUSH' || env.TELEGRAM_BOT_TOKEN && env.INFORMATION_NOTICE == 'TG'
       run: |
         if [[ "${{ env.INFORMATION_NOTICE }}" == "TG" ]]; then
           if [[ "${{steps.compile.outcome}}" == 'success' ]]; then
-            curl -k --data chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" --data "text=我亲爱的✨主人✨：您使用【${{matrix.target}}】文件夹编译【${REPO_BRANCH}分支的${{env.TARGET_PROFILE}}】固件顺利编译完成了✌️💯💐(${{env.WAREHOUSE_MAN}}仓库的#${{env.RUN_NUMBER}}号)！($(date +%Y年%m月%d号%H时%M分))" "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage"
+            curl -k --data chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" --data "text=✨您使用【${{matrix.target}}】文件夹编译【${REPO_BRANCH}分支的${{env.TARGET_PROFILE}}】固件顺利编译完成了✌️💯💐(${{env.WAREHOUSE_MAN}}仓库的#${{env.RUN_NUMBER}}号)！($(date +%Y年%m月%d号%H时%M分))" "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage"
           fi
         fi
         if [[ "${{ env.INFORMATION_NOTICE }}" == "PUSH" ]]; then
           if [[ "${{steps.compile.outcome}}" == 'success' ]]; then
-            curl -k --data token="${{ secrets.PUSH_PLUS_TOKEN }}" --data title="[${{ env.SOURCE }}-${{ env.TARGET_PROFILE }}]编译成功" --data "content=我亲爱的✨主人✨：您使用【${{matrix.target}}】文件夹编译【${REPO_BRANCH}分支的${{env.TARGET_PROFILE}}】固件顺利编译完成了✌️💯💐(${{env.WAREHOUSE_MAN}}仓库的#${{env.RUN_NUMBER}}号)！($(date +%Y年%m月%d号%H时%M分))" "http://www.pushplus.plus/send"
+            curl -k --data token="${{ secrets.PUSH_PLUS_TOKEN }}" --data title="[${{ env.SOURCE }}-${{ env.TARGET_PROFILE }}]编译成功" --data "content=✨您使用【${{matrix.target}}】文件夹编译【${REPO_BRANCH}分支的${{env.TARGET_PROFILE}}】固件顺利编译完成了✌️💯💐(${{env.WAREHOUSE_MAN}}仓库的#${{env.RUN_NUMBER}}号)！($(date +%Y年%m月%d号%H时%M分))" "http://www.pushplus.plus/send"
           fi
         fi
