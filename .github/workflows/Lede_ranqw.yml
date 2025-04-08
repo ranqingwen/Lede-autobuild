@@ -28,16 +28,6 @@ on:
         options:
           - 'aarch64'
           - 'x86_64'
-      CPU_SELECTION:
-        description: 'CPU优选,增加编译速度'
-        required: true
-        default: '默认'
-        type: choice
-        options:
-          - '默认'
-          - '8370C'
-          - '8272CL'
-          - '8171M'
       INFORMATION_NOTICE:
         description: 'Telegram或pushplus信息通知'
         required: true
