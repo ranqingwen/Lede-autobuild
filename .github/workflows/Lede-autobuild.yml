@@ -1,0 +1,278 @@
+name: Lede-autobuild
+
+permissions:
+  contents: write
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+
+
+# 定时触发开启开始编译(把下面两个#去掉开启,时间设置请看定时开启编译说明)
+  schedule:
+    - cron: 30 0 * * 4
+
+#分钟字段：30 表示在分钟为UTC时间为30的时候执行，既30分。
+#小时字段：0 表示在小时为UTC时间为0的时候执行。北京时间+8，既8点。
+#日期字段：* 日期，表示在每月的第几天执行。
+#月份字段：* 表示月份，即 1 到 12 月都会匹配。
+#星期字段：4 表示匹配周几，如果指定了日期情况下，星期的设置在将不起实际作用。此时为每周4。
+
+env:
+  REPO_URL: https://github.com/coolsnowwolf/lede
+  REPO_BRANCH: master
+  FEEDS_CONF: feeds.conf.default
+  CONFIG_FILE: config/x86_64.config
+  DIY_P1_SH: diy_script/diy-part1.sh
+  DIY_P2_SH: diy_script/diy-part2.sh
+  FILE_NAME: OpenWrt
+  PRODUCT_NAME: x86_64
+  CACHE_TOOLCHAIN: true
+  UPLOAD_BIN_DIR: false
+  UPLOAD_FIRMWARE: false
+  UPLOAD_RELEASE: true
+  TZ: Asia/Shanghai
+
+jobs:
+  Lede-2305-autobuild:
+    name: 编译Lede_2305_x64
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: 检查服务器性能
+      run: |
+        echo "警告⚠"
+        echo "分配的服务器性能有限，若选择的插件过多，务必注意CPU性能！"
+        echo -e "已知CPU型号(降序): 7763，8370C，8272CL，8171M，E5-2673\n"
+        echo "--------------------------CPU信息--------------------------"
+        echo "CPU物理数量: $(cat /proc/cpuinfo | grep "physical id" | sort | uniq | wc -l)"
+        echo "CPU核心数量: $(nproc)"
+        echo -e "CPU型号信息:$(cat /proc/cpuinfo | grep -m1 name | awk -F: '{print $2}')\n"
+        echo "--------------------------内存信息--------------------------"
+        echo "已安装内存详细信息:"
+        echo -e "$(sudo lshw -short -C memory | grep GiB)\n"
+        echo "--------------------------硬盘信息--------------------------"
+        echo "硬盘数量: $(ls /dev/sd* | grep -v [1-9] | wc -l)" && df -hT
+
+    - name: 最大化构建空间
+      uses: easimon/maximize-build-space@master
+      with:
+        root-reserve-mb: 2048
+        swap-size-mb: 8192
+        remove-dotnet: 'true'
+        remove-android: 'true'
+        remove-haskell: 'true'
+        remove-codeql: 'true'
+        remove-docker-images: 'true'
+        
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 初始化环境
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo rm -rf /etc/apt/sources.list.d
+        sudo bash -c "curl -skL https://raw.githubusercontent.com/sbwml/actions/openwrt-build-setup/sources-24.04.list > /etc/apt/sources.list"
+        sudo rm -rf /etc/apt/sources.list.d* /usr/local/lib/android* /etc/docker* /etc/firefox* /etc/mysql* /etc/php* /opt/google* /usr/share/dotnet* /usr/share/google* /usr/share/moby* /usr/share/mysql* /usr/share/php*
+        sudo -E apt-get -qq update
+        sudo -E apt-get -y purge azure* docker* dotnet* firefox* ghc* google* llvm* mongodb* mysql* php* powershell* snap* gfortran* microsoft-edge-stable
+        sudo -E apt-get -qq install $(curl -fsSL raw.githubusercontent.com/Lai-xi/Actions-Lede_x86/main/run)
+        sudo -E apt-get -qq autoremove --purge
+        sudo -E apt-get -qq clean
+        sudo timedatectl set-timezone "$TZ"
+        sudo mkdir -p /workdir
+        sudo chown $USER:$GROUPS /workdir
+
+    - name: 强制清理磁盘
+      run: |
+        sudo rm -rf /mnt/*
+        sudo rm -rf /opt/*
+        sudo rm -rf /usr/local/*
+        df -hT
+
+    - name: 克隆源代码
+      # working-directory: $GITHUB_WORKSPACE
+      run: |
+        df -hT $PWD
+        git clone --single-branch --depth=1 --filter=blob:none $REPO_URL -b $REPO_BRANCH $GITHUB_WORKSPACE/openwrt
+        echo "OPENWRT_PATH=$GITHUB_WORKSPACE/openwrt" >> $GITHUB_ENV
+
+    - name: 生成变量
+      run: |
+        [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
+        SOURCE_REPO="$(echo $REPO_URL | awk -F '/' '{print $(NF)}')"
+        echo "SOURCE_REPO=$SOURCE_REPO" >> $GITHUB_ENV
+        DEVICE_TARGET=$(cat openwrt/.config | grep CONFIG_TARGET_BOARD | awk -F '"' '{print $2}')
+        echo "DEVICE_TARGET=$DEVICE_TARGET" >> $GITHUB_ENV
+        DEVICE_SUBTARGET=$(cat openwrt/.config | grep CONFIG_TARGET_SUBTARGET | awk -F '"' '{print $2}')
+        echo "DEVICE_SUBTARGET=$DEVICE_SUBTARGET" >> $GITHUB_ENV
+
+    - name: 加载自定义软件源
+      run: |
+        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
+        chmod +x $DIY_P1_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P1_SH
+
+    - name: 更新软件源
+      run: cd openwrt && ./scripts/feeds update -a
+
+    - name: 安装软件源
+      run: cd openwrt && ./scripts/feeds install -a
+
+    - name: 加载自定义配置
+      run: |
+        [ -e files ] && mv files openwrt/files
+        [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
+        chmod +x $DIY_P2_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P2_SH
+        $GITHUB_WORKSPACE/diy_script/preset-clash-core.sh $CLASH_KERNEL
+        $GITHUB_WORKSPACE/diy_script/preset-openwrt.sh $CLASH_KERNEL
+
+    - name: 缓存工具链
+      if: env.CACHE_TOOLCHAIN == 'true'
+      uses: HiGarfield/cachewrtbuild@main
+      with:
+        ccache: true
+        mixkey: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
+        prefix: ${{ env.OPENWRT_PATH }}
+
+    - name: 下载软件包
+      id: package
+      run: |
+        cd openwrt
+        make defconfig
+        make download -j8
+        find dl -size -1024c -exec ls -l {} \;
+        find dl -size -1024c -exec rm -f {} \;
+
+    - name: 编译前检查磁盘使用情况
+      if: (!cancelled())
+      run: df -hT
+
+    - name: 开始编译固件
+      id: compile
+      run: |
+        cd openwrt
+        echo -e "$(nproc) thread compile"
+        make -j$(nproc) || make -j1 || make -j1 V=s
+        echo "status=success" >> $GITHUB_OUTPUT
+        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
+        echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+
+    - name: 编译后检查磁盘使用情况
+      if: (!cancelled())
+      run: |
+        echo "=========================================="
+        echo "----------------空间使用-------------------"
+        echo "=========================================="
+        echo "系统空间       类型   总数  已用  可用 使用率"
+        df -hT
+        echo "=========================================="
+        du -h --max-depth=1 openwrt/ --exclude=build_dir --exclude=bin
+        du -h --max-depth=1 openwrt/build_dir
+        du -h --max-depth=1 openwrt/bin
+
+    - name: 上传 bin 目录
+      uses: actions/upload-artifact@v4
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true' && !cancelled()
+      with:
+        name: ${{ env.FILE_NAME }}-${{ env.KERNEL }}-bin-${{ env.FILE_DATE }}
+        path: openwrt/bin
+
+    - name: 整理文件
+      id: organize
+      if: steps.compile.outputs.status == 'success' && !cancelled()
+      run: |
+        cd openwrt/bin/targets/*/*
+        echo "KERNEL=$(cat *.manifest | grep ^kernel | cut -d- -f2 | tr -d ' ')" >> $GITHUB_ENV
+        mv openwrt-x86-64-generic-squashfs-combined.img.gz ${{ env.FILE_NAME }}-${{ env.FILE_DATE }}-bios.img.gz
+        mv openwrt-x86-64-generic-squashfs-combined-efi.img.gz ${{ env.FILE_NAME }}-${{ env.FILE_DATE }}-uefi.img.gz
+        rm -rf config.buildinfo
+        rm -rf feeds.buildinfo
+        rm -rf openwrt-x86-64-generic-kernel.bin
+        rm -rf openwrt-x86-64-generic-squashfs-rootfs.img.gz
+        rm -rf openwrt-x86-64-generic.manifest
+        rm -rf profiles.json
+        rm -rf version.buildinfo
+        rm -rf sha256sums
+        rm -rf packages
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        echo "status=success" >> $GITHUB_OUTPUT
+
+    - name: 上传固件目录
+      uses: actions/upload-artifact@v4
+      if: ${{ env.UPLOAD_FIRMWARE == 'true' && steps.organize.outputs.status == 'success' && !cancelled() }}
+      with:
+        name: ${{ env.FILE_NAME }}-${{ env.KERNEL }}-${{ env.FILE_DATE }}
+        path: ${{ env.FIRMWARE }}
+
+    - name: 生成发布标签
+      id: tag
+      if: ${{ env.UPLOAD_RELEASE == 'true' && steps.organize.outputs.status == 'success' && !cancelled() }}
+      run: |
+        : > "$GITHUB_OUTPUT"  # 清空旧输出，避免重复触发旧变量
+        release_tag=$(date +"%Y.%m.%d-%H.%M")
+        release_date=$(date +"%Y-%m-%d %H:%M")
+        echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+        echo "release_date=$release_date" >> "$GITHUB_OUTPUT"
+        echo "status=success" >> "$GITHUB_OUTPUT"
+        # 🔽 添加发布页说明
+        echo "  ### 📒 固件信息 📒 ###  " >> release.txt
+        echo "- 💄 LUCI版本：23.05 " >> release.txt
+        echo "- 🚀 内核版本：${{ env.KERNEL }} " >> release.txt
+        echo "- 💻 平台架构：${{ env.PRODUCT_NAME }} " >> release.txt
+        echo "- 💝 源码分支：${{ env.REPO_BRANCH }} " >> release.txt
+        echo "- 🎯 固件名称：${{ env.FILE_NAME }}" >> release.txt
+        echo "- 🌐 默认地址：192.168.23.250 " >> release.txt
+        echo "- 🧑‍💼 默认账号：root " >> release.txt
+        echo "- 🔑 默认密码：无密码 " >> release.txt
+        echo "- 📅 编译时间：$release_date" >> release.txt
+        echo "----------------------------------------" >> release.txt
+        echo "- ⚽ 编译日志请查看 Actions 构建详情" >> release.txt
+    - name: 上传固件至Release
+      uses: softprops/action-gh-release@v2
+      if: ${{ env.UPLOAD_RELEASE == 'true' && steps.tag.outputs.status == 'success' && !cancelled() }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      with:
+        name: ${{ env.FILE_NAME }}
+        tag_name: ${{ env.FILE_NAME }}
+        body_path: release.txt
+        files: ${{ env.FIRMWARE }}/*
+
+    - name: 编译成功，发Telegram通知
+      if: success() && env.TELEGRAM_WORK_PUSH == 'true'
+      run: |
+        MESSAGE="♨️【${{ env.FILE_NAME }}】固件编译完成
+        🎯 固件名称: ${{ env.FILE_NAME }}
+        💻 平台架构: ${{ env.PRODUCT_NAME }}
+        🧱 固件源码: ${{ env.REPO_URL }}
+        🌿 源码分支: ${{ env.REPO_BRANCH }}
+        🌐 默认地址: 192.168.23.250
+        👤 用户名: root
+        🔑 密码: 无
+        📦 下载地址: https://github.com/${{ github.repository }}/releases/tag/${{ env.FILE_NAME }}"
+        curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
+          -d chat_id="${{ secrets.TELEGRAM_TO }}" \
+          -d text="$MESSAGE" \
+          -d disable_web_page_preview=true
+
+    - name: 编译成功，发企业微信通知
+      if: success() && env.WECHAT_WORK_PUSH == 'true'
+      run: |
+        CONTENT="♨️【${{ env.FILE_NAME }}】固件编译完成
+        🎯 固件名称: ${{ env.FILE_NAME }}
+        💻 平台架构: ${{ env.PRODUCT_NAME }}
+        🧱 固件源码: ${{ env.REPO_URL }}
+        🌿 源码分支: ${{ env.REPO_BRANCH }}
+        🌐 默认地址: 192.168.23.250
+        👤 用户名: root
+        🔑 密码: 无
+        📦 下载地址: https://github.com/${{ github.repository }}/releases/tag/${{ env.FILE_NAME }}"
+        curl -X POST "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${{ secrets.WEBHOOK_SEND_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d "$(jq -n --arg content "$CONTENT" '{msgtype: "text", text: {content: $content}}')"    

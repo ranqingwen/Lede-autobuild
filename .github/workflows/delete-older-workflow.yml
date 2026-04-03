@@ -1,0 +1,21 @@
+name: 删除workflow，清理工作流
+
+on:
+  schedule:
+    - cron: 0 0 1 * *
+  workflow_dispatch:
+
+jobs:
+  delete-older-workflow:
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: 删除workflow，清理工作流
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: 0
+          keep_minimum_runs: 0
