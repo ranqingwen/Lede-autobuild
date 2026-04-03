@@ -126,6 +126,8 @@ jobs:
         [ -e files ] && mv files openwrt/files
         [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
         chmod +x $DIY_P2_SH
+        chmod +x $GITHUB_WORKSPACE/diy_script/preset-clash-core.sh
+        chmod +x $GITHUB_WORKSPACE/diy_script/preset-openwrt.sh
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
         $GITHUB_WORKSPACE/diy_script/preset-clash-core.sh $CLASH_KERNEL

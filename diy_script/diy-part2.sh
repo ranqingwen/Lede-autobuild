@@ -43,25 +43,24 @@ sed -i 's/Bootstrap theme/Argon theme/g' feeds/luci/collections/*/Makefile
 sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/*/Makefile
 
 # 更改argon主题背景
-cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
+cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/argon.jpg
 
 # 显示增加编译时间
 sed -i "s/DISTRIB_REVISION='R[0-9]\+\.[0-9]\+\.[0-9]\+'/DISTRIB_REVISION='@R$build_date'/g" package/lean/default-settings/files/zzz-default-settings
-sed -i "s/LEDE/OpenWrt_${build_name} by ranqw build/g" package/lean/default-settings/files/zzz-default-settings
+
+# 修改系统名称显示（对应后台页面的版本名称部分）
+sed -i "s|LEDE|OpenWrt/LEDE_${build_name} by ranqw build|g" package/lean/default-settings/files/zzz-default-settings
 
 
 # 修改右下角脚本版本信息和登录页版本信息
-#cp -f $GITHUB_WORKSPACE/personal/argon/footer.ut package/luci-theme-argon/ucode/template/themes/argon/footer.ut
-#cp -f $GITHUB_WORKSPACE/personal/argon/footer_login.ut package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
-#sed -i "s/OpenWrt_2410_name by ranqw build @R build_date/OpenWrt_${build_name} by ranqw build @R${build_date}/g" \
-#package/luci-theme-argon/ucode/template/themes/argon/footer.ut \
-#package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+cp -f $GITHUB_WORKSPACE/personal/argon/footer.ut package/luci-theme-argon/ucode/template/themes/argon/footer.ut
+cp -f $GITHUB_WORKSPACE/personal/argon/footer_login.ut package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 
-# 修改右下角脚本版本信息
-sed -i 's|<a href="https://github.com/jerrykuku/luci-theme-argon" target="_blank">ArgonTheme <%# vPKG_VERSION %></a>|<a class="luci-link" href="https://github.com/ranqingwen/Lede-2305-autobuild/releases" target="_blank">下载最新版</a>|' package/luci-theme-argon/luasrc/view/themes/argon/footer.htm
-sed -i 's/<a class=\"luci-link\" href=\"https:\/\/github.com\/openwrt\/luci\" target=\"_blank\">Powered by <%= ver.luciname %> (<%= ver.luciversion %>)<\/a>/OpenWrt by ranqw/' package/luci-theme-argon/luasrc/view/themes/argon/footer.htm
-# 修改登录界面脚本版本信息
-sed -i "/<a class=\"luci-link\"/d; /<a href=\"https:\/\/github.com\/jerrykuku\/luci-theme-argon\"/d; s|<%= ver.distversion %>|OpenWrt/LEDE by ranqw @R$build_date|" package/luci-theme-argon/luasrc/view/themes/argon/footer_login.htm
+# 精确匹配你提供的单空格占位符，并替换为带下划线的格式
+sed -i "s|OpenWrt/LEDE by ranqw @R build_date|OpenWrt/LEDE_${build_name} by ranqw build @R${build_date}|g" \
+package/luci-theme-argon/ucode/template/themes/argon/footer.ut \
+package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+
 
 
 # 修改欢迎banner

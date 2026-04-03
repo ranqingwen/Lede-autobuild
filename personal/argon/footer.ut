@@ -20,7 +20,7 @@
 		<footer class="mobile-hide" style="text-wrap: auto">
 			<div class="footer-content" style="display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: end;">
 
-				<a href="">LEDE by RANQWINGWEN build @R build_date</a>
+				<a href="">OpenWrt/LEDE by ranqw @R build_date</a>
 
 				<span class="footer-separator">|</span>
 
