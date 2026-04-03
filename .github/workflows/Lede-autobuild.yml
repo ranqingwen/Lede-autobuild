@@ -26,7 +26,7 @@ env:
   DIY_P1_SH: diy_script/diy-part1.sh
   DIY_P2_SH: diy_script/diy-part2.sh
   FILE_NAME: Lede
-  LUCI_EDITION: 23.05
+  LUCI_EDITION: 24.10
   PRODUCT_NAME: x86_64
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
@@ -35,8 +35,8 @@ env:
   TZ: Asia/Shanghai
 
 jobs:
-  Lede-2305-autobuild:
-    name: 编译Lede_2305_x64
+  Lede-2410-autobuild:
+    name: 编译Lede_2410_x64
     runs-on: ubuntu-24.04
 
     steps:
