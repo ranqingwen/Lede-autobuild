@@ -43,7 +43,11 @@ git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 git clone https://github.com/sirpdboy/luci-app-poweroffdevice.git package/luci-app-poweroffdevice
 
 # 添加 luci-app-quickstart (快速设置首页)
-# git clone https://github.com/linkease/istore-quickstart.git package/luci-app-quickstart
+git clone https://github.com/linkease/istore-quickstart.git package/luci-app-quickstart
+git clone https://github.com/linkease/istore.git package/luci-app-istore
+
+添加 luci-app-partexp (分区扩容插件)
+git clone https://github.com/sirpdboy/luci-app-partexp.git package/luci-app-partexp
 
 # 添加 openclaw
 #git clone https://github.com/10000ge10000/luci-app-openclaw.git package/luci-app-openclaw

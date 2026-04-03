@@ -25,7 +25,8 @@ env:
   CONFIG_FILE: config/x86_64.config
   DIY_P1_SH: diy_script/diy-part1.sh
   DIY_P2_SH: diy_script/diy-part2.sh
-  FILE_NAME: OpenWrt
+  FILE_NAME: Lede
+  LUCI_EDITION: 23.05
   PRODUCT_NAME: x86_64
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
@@ -262,11 +263,11 @@ jobs:
         echo "status=success" >> "$GITHUB_OUTPUT"
         # 🔽 添加发布页说明
         echo "  ### 📒 固件信息 📒 ###  " >> release.txt
-        echo "- 💄 LUCI版本：23.05 " >> release.txt
+        echo "- 🎯 固件名称：${{ env.FILE_NAME }}" >> release.txt
+        echo "- 💄 LUCI版本：${{ LUCI_EDITION }} " >> release.txt
         echo "- 🚀 内核版本：${{ env.KERNEL }} " >> release.txt
         echo "- 💻 平台架构：${{ env.PRODUCT_NAME }} " >> release.txt
         echo "- 💝 源码分支：${{ env.REPO_BRANCH }} " >> release.txt
-        echo "- 🎯 固件名称：${{ env.FILE_NAME }}" >> release.txt
         echo "- 🌐 默认地址：192.168.23.250 " >> release.txt
         echo "- 🧑‍💼 默认账号：root " >> release.txt
         echo "- 🔑 默认密码：无密码 " >> release.txt
