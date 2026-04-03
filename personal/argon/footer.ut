@@ -25,7 +25,7 @@
 				<span class="footer-separator">|</span>
 
 
-				<a class="luci-link" href="www.baidu.com" target="_blank">👆点这里下载最新版本</a>
+				<a class="luci-link" href="https://github.com/ranqingwen/Lede-2305-autobuild/releases" target="_blank">👆点这里下载最新版本</a>
 
 				<ul class="breadcrumb pull-right" id="modemenu" style="display:none"></ul>
 			</div>
