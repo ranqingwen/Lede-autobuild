@@ -39,6 +39,12 @@ git clone https://github.com/gdy666/luci-app-lucky.git package/lucky
 # 添加 oaf
 git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 
+# 添加 luci-app-istore (iStore 商店本体)
+git clone https://github.com/linkease/istore.git package/luci-app-istore
+
+# 添加 luci-app-quickstart (快速设置首页)
+git clone https://github.com/linkease/istore-quickstart.git package/luci-app-quickstart
+
 # 添加 openclaw
 #git clone https://github.com/10000ge10000/luci-app-openclaw.git package/luci-app-openclaw
 
