@@ -263,7 +263,7 @@ jobs:
         # 🔽 添加发布页说明
         echo "  ### 📒 固件信息 📒 ###  " >> release.txt
         echo "- 🎯 固件名称：${{ env.FILE_NAME }}" >> release.txt
-        echo "- 💄 LUCI版本：24.10 " >> release.txt
+        echo "- 💄 LUCI版本：${{ env.VERSION }}" >> release.txt
         echo "- 🚀 内核版本：${{ env.KERNEL }} " >> release.txt
         echo "- 💻 平台架构：${{ env.PRODUCT_NAME }} " >> release.txt
         echo "- 💝 源码分支：${{ env.REPO_BRANCH }} " >> release.txt
