@@ -108,6 +108,12 @@ fi
 rm -rf dl/ustream-ssl-*
 rm -rf build_dir/target-*/ustream-ssl-*
 
+# 移除fchomo和nikki
+rm -rf feeds/luci/applications/luci-app-fchomo
+rm -rf feeds/luci/applications/luci-app-nikki
+rm -rf package/feeds/luci/luci-app-fchomo
+rm -rf package/feeds/luci/luci-app-nikki
+
 # 移除 default-settings 中的 UPnP
 find package/feeds -type f | xargs sed -i -e '/luci-app-upnp/d' -e '/luci-i18n-upnp/d' -e '/miniupnpd/d'
 sed -i '/luci-app-upnp/d' package/Makefile
