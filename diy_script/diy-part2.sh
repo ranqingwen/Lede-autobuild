@@ -46,10 +46,10 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/*/Make
 cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
 
 # 显示增加编译时间
-sed -i "s/DISTRIB_REVISION='R[0-9]\+\.[0-9]\+\.[0-9]\+'/DISTRIB_REVISION='@R$build_date'/g" package/lean/default-settings/files/zzz-default-settings
+sed -i "s/DISTRIB_REVISION='R[0-9]\+\.[0-9]\+\.[0-9]\+'/DISTRIB_REVISION='$build_date'/g" package/lean/default-settings/files/zzz-default-settings
 
 # 修改系统名称显示（对应后台页面的版本名称部分）
-sed -i "s|LEDE|OpenWrt/LEDE_${build_name} by ranqw build|g" package/lean/default-settings/files/zzz-default-settings
+sed -i "s|LEDE|OpenWrt/Lede ${build_name} by ranqw |g" package/lean/default-settings/files/zzz-default-settings
 
 
 # 修改右下角脚本版本信息和登录页版本信息

@@ -1,11 +1,11 @@
 ## 当前编译状态：
 | 源码+版本 | 固件编译状态 | 脚本文件 | 固件下载 |
 | :-------------: | :-------------: | :-------------: | :-------------: |
-| [![](https://img.shields.io/badge/Lede-6.12-32C955.svg?logo=openwrt)](https://github.com/ranqingwen/Lede-2305-autobuild/blob/main/.github/workflows/Lede-autobuild.yml) | [![](https://github.com/ranqingwen/Lede-2305-autobuild/actions/workflows/Lede-autobuild.yml/badge.svg)](https://github.com/ranqingwen/Lede-2305-autobuild/actions/workflows/Lede-autobuild.yml) | [![](https://img.shields.io/badge/脚本-配置-orange.svg?logo=apache-spark)](https://github.com/ranqingwen/Lede-2305-autobuild/tree/main/diy_script) | [![](https://img.shields.io/badge/下载-链接-blueviolet.svg?logo=hack-the-box)](https://github.com/ranqingwen/Lede-2305-autobuild/releases) |
+| [![](https://img.shields.io/badge/Lede-6.12-32C955.svg?logo=openwrt)](https://github.com/ranqingwen/Lede-autobuild/blob/main/.github/workflows/Lede-autobuild.yml) | [![](https://github.com/ranqingwen/Lede-autobuild/actions/workflows/Lede-autobuild.yml/badge.svg)](https://github.com/ranqingwen/Lede-autobuild/actions/workflows/Lede-autobuild.yml) | [![](https://img.shields.io/badge/脚本-配置-orange.svg?logo=apache-spark)](https://github.com/ranqingwen/Lede-autobuild/tree/main/diy_script) | [![](https://img.shields.io/badge/下载-链接-blueviolet.svg?logo=hack-the-box)](https://github.com/ranqingwen/Lede-autobuild/releases) |
 
 </br>
 
-## 项目说明 [![](https://github.com/ranqingwen/Lede-2305-autobuild/blob/main/personal/describes.svg)](#项目说明-)
+## 项目说明 [![](https://github.com/ranqingwen/Lede-autobuild/blob/main/personal/describes.svg)](#项目说明-)
 - 固件编译使用的源代码来自：[![Lean](https://img.shields.io/badge/Lede-Lean-red.svg?style=flat&logo=appveyor)](https://github.com/coolsnowwolf/lede) 
 - 项目使用 Github Actions 拉取 [Lean](https://github.com/coolsnowwolf/lede) 的 `Openwrt-24.10（内核版本6.12）` 源码仓库进行云编译
 -  本库编译的x86固件为squashfs格式（ext4 与squashfs 格式的区别： ext4 格式的rootfs 可以扩展磁盘空间大小，而squashfs 不能。 squashfs 格式的rootfs 可以使用重置功能（恢复出厂设置），而ext4 不能）；
