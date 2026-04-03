@@ -46,7 +46,7 @@ git clone https://github.com/sirpdboy/luci-app-poweroffdevice.git package/luci-a
 git clone https://github.com/linkease/istore-quickstart.git package/luci-app-quickstart
 git clone https://github.com/linkease/istore.git package/luci-app-istore
 
-添加 luci-app-partexp (分区扩容插件)
+# 添加 luci-app-partexp (分区扩容插件)
 git clone https://github.com/sirpdboy/luci-app-partexp.git package/luci-app-partexp
 
 # 添加 openclaw
