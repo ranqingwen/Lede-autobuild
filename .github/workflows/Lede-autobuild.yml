@@ -27,6 +27,7 @@ env:
   DIY_P2_SH: diy_script/diy-part2.sh
   FILE_NAME: Lede
   PRODUCT_NAME: x86_64
+  CLASH_KERNEL: amd64
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
   UPLOAD_FIRMWARE: false

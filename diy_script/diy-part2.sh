@@ -45,23 +45,25 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/*/Make
 # 更改argon主题背景
 cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
 
-# 显示增加编译时间
+# 修改编译修订版本号（显示增加编译时间）
 sed -i "s/DISTRIB_REVISION='R[0-9]\+\.[0-9]\+\.[0-9]\+'/DISTRIB_REVISION='$build_date'/g" package/lean/default-settings/files/zzz-default-settings
 
 # 修改系统名称显示（对应后台页面的版本名称部分）
-sed -i "s|LEDE|OpenWrt/Lede ${build_name} by ranqw |g" package/lean/default-settings/files/zzz-default-settings
+# 将 LEDE 替换为包含版本号和日期的完整格式：OpenWrt/Lede-${build_name} by ranqw R${build_date}
+sed -i "s|LEDE|OpenWrt/Lede-${build_name} by ranqw R${build_date}|g" package/lean/default-settings/files/zzz-default-settings
 
-
-# 修改右下角脚本版本信息和登录页版本信息
+# 覆盖 Argon 主题的页脚模板文件 [cite: 1, 5]
+# 将你自定义的 footer.ut 和 footer_login.ut 复制到源码目录中
 cp -f $GITHUB_WORKSPACE/personal/argon/footer.ut package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 cp -f $GITHUB_WORKSPACE/personal/argon/footer_login.ut package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 
-# 精确匹配你提供的单空格占位符，并替换为带下划线的格式
-sed -i "s|OpenWrt/LEDE by ranqw @R build_date|OpenWrt/LEDE_${build_name} by ranqw build @R${build_date}|g" \
-package/luci-theme-argon/ucode/template/themes/argon/footer.ut \
-package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+# 精确替换模板文件中的占位符
+# 匹配 footer.ut 和 footer_login.ut 中的 ${build_name} 和 ${build_date} 并替换为实际变量值 [cite: 1, 7]
+sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
+sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 
-
+sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 
 # 修改欢迎banner
 cp -f $GITHUB_WORKSPACE/personal/banner package/base-files/files/etc/banner
@@ -114,9 +116,8 @@ rm -rf feeds/luci/applications/luci-app-nikki
 rm -rf package/feeds/luci/luci-app-fchomo
 rm -rf package/feeds/luci/luci-app-nikki
 
-
-rm -rf feeds/luci/applications/luci-app-quickstart
-rm -rf feeds/packages/utils/luci-app-partexp
+# rm -rf feeds/luci/applications/luci-app-quickstart
+# rm -rf feeds/packages/utils/luci-app-partexp
 
 # 移除 default-settings 中的 UPnP
 find package/feeds -type f | xargs sed -i -e '/luci-app-upnp/d' -e '/luci-i18n-upnp/d' -e '/miniupnpd/d'
