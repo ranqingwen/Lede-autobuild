@@ -29,13 +29,11 @@ sed -i '/helloworld/d' feeds.conf.default
 sed -i '/small/d' feeds.conf.default
 sed -i '/passwall/d' feeds.conf.default
 sed -i '/istore/d' feeds.conf.default
-sed -i '/nas/d' feeds.conf.default
 # 插入或追加新源
 sed -i '2i src-git small https://github.com/kenzok8/small' feeds.conf.default
 # 在末尾追加其他源
 cat <<EOF >> feeds.conf.default
 src-git istore https://github.com/linkease/istore;main
-src-git nas https://github.com/linkease/nas-packages-luci.git;main
 src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git;main
 src-git passwall2 https://github.com/Openwrt-Passwall/openwrt-passwall2.git;main
 EOF
