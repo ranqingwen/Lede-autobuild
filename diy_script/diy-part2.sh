@@ -13,7 +13,7 @@
 echo "开始 DIY2 配置……"
 echo "========================="
 build_date=$(TZ=Asia/Shanghai date "+%Y.%m.%d")
-build_name="2410"
+build_name="24.10"
 
 # 修改主机名字，修改你喜欢的就行（不能纯数字或者使用中文）
 sed -i "/uci commit system/i\uci set system.@system[0].hostname='OpenWrt'" package/lean/default-settings/files/zzz-default-settings
@@ -50,7 +50,7 @@ sed -i "s/DISTRIB_REVISION='R[0-9]\+\.[0-9]\+\.[0-9]\+'/DISTRIB_REVISION='$build
 
 # 修改系统名称显示（对应后台页面的版本名称部分）
 # 将 LEDE 替换为包含版本号和日期的完整格式：OpenWrt/Lede-${build_name} by ranqw R${build_date}
-sed -i "s|LEDE|OpenWrt/Lede-${build_name} by ranqw R${build_date}|g" package/lean/default-settings/files/zzz-default-settings
+sed -i "s|LEDE|OpenWrt/Lede-${build_name} by ranqw R|g" package/lean/default-settings/files/zzz-default-settings
 
 # 覆盖 Argon 主题的页脚模板文件 [cite: 1, 5]
 # 将你自定义的 footer.ut 和 footer_login.ut 复制到源码目录中
