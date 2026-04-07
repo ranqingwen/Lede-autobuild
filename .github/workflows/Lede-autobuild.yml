@@ -284,7 +284,7 @@ jobs:
         echo "- 📅 编译时间：$release_date" >> release.txt
         echo "----------------------------------------" >> release.txt
         echo "- ⚽ 编译日志请查看 Actions 构建详情" >> release.txt
-- name: 上传固件至Release
+    - name: 上传固件至Release
       uses: softprops/action-gh-release@v2
       if: ${{ env.UPLOAD_RELEASE == 'true' && steps.tag.outputs.status == 'success' && !cancelled() }}
       env:
