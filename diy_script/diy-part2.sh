@@ -15,6 +15,7 @@ echo "========================="
 build_date=$(TZ=Asia/Shanghai date "+%Y.%m.%d")
 build_name="24.10"
 
+
 # 修改主机名字，修改你喜欢的就行（不能纯数字或者使用中文）
 sed -i "/uci commit system/i\uci set system.@system[0].hostname='OpenWrt'" package/lean/default-settings/files/zzz-default-settings
 sed -i "s/hostname='.*'/hostname='OpenWrt'/g" ./package/base-files/files/bin/config_generate
@@ -45,24 +46,24 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/*/Make
 # 更改argon主题背景
 # cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
 
-# 修改编译修订版本号（显示增加编译时间）
-sed -i "s/DISTRIB_REVISION='R[0-9]\+\.[0-9]\+\.[0-9]\+'/DISTRIB_REVISION=''/g" package/lean/default-settings/files/zzz-default-settings
+# 动态获取基础版本号 (对应 Lede-23.05 中的 23.05)
+luci_version=$(grep "VERSION_NUMBER:=" include/version.mk | cut -d'=' -f2)
 
-# 修改系统名称显示（对应后台页面的版本名称部分）
-sed -i "s|LEDE|OpenWrt/Lede ${build_name} by ranqw R${build_date}|g" package/lean/default-settings/files/zzz-default-settings
+# --- 2. 修改系统概览页面 (首页) ---
+# 获取发行版 ID (如 OpenWrt)
+op_dist=$(grep "DISTRIB_ID=" package/base-files/files/etc/openwrt_release | cut -d"'" -f2)
+sed -i "s|DISTRIB_DESCRIPTION='.*'|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @$op_dist %R \/ Lede-$luci_version'|g" package/lean/default-settings/files/zzz-default-settings
+# 清理 LuCI 版本号后缀的 branch git 乱码
+sed -i 's/branch git-.*//g' package/base-files/files/bin/config_generate
 
-# 覆盖 Argon 主题的页脚模板文件 [cite: 1, 5]
-# 将你自定义的 footer.ut 和 footer_login.ut 复制到源码目录中
+# 修改 Argon 主题页脚 ---
 cp -f $GITHUB_WORKSPACE/personal/argon/footer.ut package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 cp -f $GITHUB_WORKSPACE/personal/argon/footer_login.ut package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 
-# 精确替换模板文件中的占位符
-# 匹配 footer.ut 和 footer_login.ut 中的 ${build_name} 和 ${build_date} 并替换为实际变量值 [cite: 1, 7]
-sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
-sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 
-sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
-sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+# 2. 统一替换占位符 (只替换日期，并带上 R)
+# 此时 ut 文件里的 ${build_date} 会变成 R2026.04.07
+sed -i "s|\${build_date}|R$build_date|g" package/luci-theme-argon/ucode/template/themes/argon/footer*.ut
 
 # 修改欢迎banner
 cp -f $GITHUB_WORKSPACE/personal/banner package/base-files/files/etc/banner

@@ -20,12 +20,12 @@
 		<footer class="mobile-hide" style="text-wrap: auto">
 			<div class="footer-content" style="display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: end;">
 
-				<a href="">Lede ${build_name} by ranqw R${build_date}</a>
+				<span>Lede by ranqw ${build_date} @OpenWrt %R</span>
 
 				<span class="footer-separator">|</span>
 
 
-				<a class="luci-link" href="https://github.com/ranqingwen/Lede-autobuild/releases" target="_blank">👆点这里下载最新版本</a>
+				<a class="luci-link" href="https://github.com/ranqingwen/Lede-autobuild/releases" target="_blank">👆下载最新版本</a>
 
 				<ul class="breadcrumb pull-right" id="modemenu" style="display:none"></ul>
 			</div>
