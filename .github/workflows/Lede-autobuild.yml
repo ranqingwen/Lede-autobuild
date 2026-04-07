@@ -6,7 +6,17 @@ permissions:
 on:
   repository_dispatch:
   workflow_dispatch:
-
+    inputs:
+      keep_releases:
+        description: '保留的 Release 数量'
+        required: false
+        default: '2'
+        type: string
+      keep_workflows:
+        description: '保留的 Workflow 运行记录数量'
+        required: false
+        default: '3'
+        type: string
 
 # 定时触发开启开始编译(把下面两个#去掉开启,时间设置请看定时开启编译说明)
   schedule:
@@ -274,16 +284,38 @@ jobs:
         echo "- 📅 编译时间：$release_date" >> release.txt
         echo "----------------------------------------" >> release.txt
         echo "- ⚽ 编译日志请查看 Actions 构建详情" >> release.txt
-    - name: 上传固件至Release
+- name: 上传固件至Release
       uses: softprops/action-gh-release@v2
       if: ${{ env.UPLOAD_RELEASE == 'true' && steps.tag.outputs.status == 'success' && !cancelled() }}
       env:
         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       with:
-        name: ${{ env.FILE_NAME }}
-        tag_name: ${{ env.FILE_NAME }}
+        # 使用动态生成的标签（例如 Lede-2026.04.06-19.30）
+        name: ${{ env.FILE_NAME }}-${{ steps.tag.outputs.release_tag }}
+        tag_name: ${{ steps.tag.outputs.release_tag }}
         body_path: release.txt
         files: ${{ env.FIRMWARE }}/*
+
+    # 重点 1：根据输入的 keep_releases 清理 Release
+    - name: 清理旧的 Releases 记录
+      uses: dev-drprasad/delete-older-releases@v0.3.3
+      if: always()
+      with:
+        keep_latest: ${{ github.event.inputs.keep_releases || '3' }}
+        delete_tags: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+    # 重点 2：根据输入的 keep_workflows 清理 Workflow
+    - name: 清理旧的 Workflows 运行记录
+      uses: Mattraks/delete-workflow-runs@v2
+      if: always()
+      with:
+        token: ${{ secrets.GH_TOKEN }}
+        repository: ${{ github.repository }}
+        retain_days: 0
+        keep_minimum_runs: ${{ github.event.inputs.keep_workflows || '10' }}
+        
 
     - name: 编译成功，发Telegram通知
       if: success() && env.TELEGRAM_WORK_PUSH == 'true'
@@ -296,7 +328,7 @@ jobs:
         🌐 默认地址: 192.168.23.250
         👤 用户名: root
         🔑 密码: 无
-        📦 下载地址: https://github.com/${{ github.repository }}/releases/tag/${{ env.FILE_NAME }}"
+        📦 下载地址: https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.release_tag }}"
         curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
           -d chat_id="${{ secrets.TELEGRAM_TO }}" \
           -d text="$MESSAGE" \
@@ -313,7 +345,7 @@ jobs:
         🌐 默认地址: 192.168.23.250
         👤 用户名: root
         🔑 密码: 无
-        📦 下载地址: https://github.com/${{ github.repository }}/releases/tag/${{ env.FILE_NAME }}"
+        📦 下载地址: https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.release_tag }}"
         curl -X POST "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${{ secrets.WEBHOOK_SEND_KEY }}" \
           -H "Content-Type: application/json" \
           -d "$(jq -n --arg content "$CONTENT" '{msgtype: "text", text: {content: $content}}')"    
