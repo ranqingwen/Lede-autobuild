@@ -43,14 +43,13 @@ sed -i 's/Bootstrap theme/Argon theme/g' feeds/luci/collections/*/Makefile
 sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/*/Makefile
 
 # 更改argon主题背景
-cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
+# cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
 
 # 修改编译修订版本号（显示增加编译时间）
-sed -i "s/DISTRIB_REVISION='R[0-9]\+\.[0-9]\+\.[0-9]\+'/DISTRIB_REVISION='$build_date'/g" package/lean/default-settings/files/zzz-default-settings
+sed -i "s/DISTRIB_REVISION='R[0-9]\+\.[0-9]\+\.[0-9]\+'/DISTRIB_REVISION=''/g" package/lean/default-settings/files/zzz-default-settings
 
 # 修改系统名称显示（对应后台页面的版本名称部分）
-# 将 LEDE 替换为包含版本号和日期的完整格式：OpenWrt/Lede-${build_name} by ranqw R${build_date}
-sed -i "s|LEDE|OpenWrt/Lede-${build_name} by ranqw R|g" package/lean/default-settings/files/zzz-default-settings
+sed -i "s|LEDE|OpenWrt/Lede ${build_name} by ranqw R${build_date}|g" package/lean/default-settings/files/zzz-default-settings
 
 # 覆盖 Argon 主题的页脚模板文件 [cite: 1, 5]
 # 将你自定义的 footer.ut 和 footer_login.ut 复制到源码目录中
