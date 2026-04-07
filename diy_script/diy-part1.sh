@@ -10,33 +10,24 @@
 # Description: OpenWrt DIY script part 1 (Before Update feeds)
 #
 
-# 添加源仓库
-# sed -i '/helloworld/d' feeds.conf.default
-# sed -i '/small/d' feeds.conf.default
-# sed -i '/passwall/d' feeds.conf.default
-# sed -i '2i src-git small https://github.com/kenzok8/small' feeds.conf.default
-# 添加linkease源
-# sed -i '$a src-git istore https://github.com/linkease/istore;main' feeds.conf.default
-# sed -i '$a src-git nas https://github.com/linkease/nas-packages-luci.git;main' feeds.conf.default
-# PassWall2核心依赖包
-# sed -i '$a src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git;main' feeds.conf.default
-# PassWall2 界面
-# sed -i '$a src-git passwall2 https://github.com/Openwrt-Passwall/openwrt-passwall2.git;main' feeds.conf.default
-
-
 # 清除旧的重复项（防止脚本多次运行导致内容重复）
 sed -i '/helloworld/d' feeds.conf.default
 sed -i '/small/d' feeds.conf.default
 sed -i '/passwall/d' feeds.conf.default
 sed -i '/istore/d' feeds.conf.default
+sed -i '/nas/d' feeds.conf.default
+
 # 插入或追加新源
 sed -i '2i src-git small https://github.com/kenzok8/small' feeds.conf.default
 # 在末尾追加其他源
 cat <<EOF >> feeds.conf.default
 src-git istore https://github.com/linkease/istore;main
+src-git nas_packages https://github.com/linkease/nas-packages.git;master
+src-git nas_luci https://github.com/linkease/nas-packages-luci.git;main
 src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git;main
 src-git passwall2 https://github.com/Openwrt-Passwall/openwrt-passwall2.git;main
 EOF
+
 
 
 # 添加 adguardHome
@@ -62,6 +53,9 @@ git clone https://github.com/sirpdboy/luci-app-poweroffdevice.git package/luci-a
 
 # 添加 luci-app-partexp (分区扩容插件)
 git clone https://github.com/sirpdboy/luci-app-partexp.git package/luci-app-partexp
+
+# 添加 sirpdboy 的 Advanced 高级设置
+git clone https://github.com/sirpdboy/luci-app-advanced.git package/luci-app-advanced
 
 # 添加 openclaw
 #git clone https://github.com/10000ge10000/luci-app-openclaw.git package/luci-app-openclaw
