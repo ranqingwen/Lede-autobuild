@@ -46,31 +46,28 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/*/Make
 # 更改argon主题背景
 # cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
 
-# 1. 动态获取基础版本号 (对应 Lede-23.05 中的 23.05)
-luci_version=$(grep "VERSION_NUMBER:=" include/version.mk | cut -d'=' -f2)
-
-# 2. 动态提取 Lean 源码生成的版本号 (例如 R26.02.20)
-# 从 zzz-default-settings 提取第一个空格前的字符
-lean_r_ver=$(grep "DISTRIB_DESCRIPTION=" package/lean/default-settings/files/zzz-default-settings | cut -d"'" -f2 | awk '{print $1}')
-
-# 3. 获取发行版 ID (如 OpenWrt)
+# --- 1. 定义和获取变量 ---
+# 获取发行版 ID (通常是 OpenWrt)
 op_dist=$(grep "DISTRIB_ID=" package/base-files/files/etc/openwrt_release | cut -d"'" -f2)
 
-# --- 修改系统概览页面 (首页) ---
-# 目标格式: Lede by ranqw R2026.04.07 @OpenWrt R26.02.20 / Lede - 24.10
-# 注意：这里去掉了原有的 %R，直接使用提取到的 $lean_r_ver，并使用脚本顶部的 $build_name (24.10)
-sed -i "s|DISTRIB_DESCRIPTION='.*'|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @$op_dist $lean_r_ver / Lede - $build_name'|g" package/lean/default-settings/files/zzz-default-settings
+# 动态获取 Lean 原始版本号 (精准获取 Rxx.xx.xx 格式)
+# 使用 -oE 正则匹配 R 开头后面带数字点的字符串，这样最稳，不会抓到前面的 LEDE 或 OpenWrt
+lean_r_ver=$(grep -oE "R[0-9]+\.[0-9]+\.[0-9]+" package/lean/default-settings/files/zzz-default-settings)
 
-# 清理 LuCI 版本号后缀的 branch git 乱码
-sed -i 's/branch git-.*//g' package/base-files/files/bin/config_generate
+# --- 2. 修改系统概览页面 (首页前半部分) ---
+# 目标：Lede by ranqw R2026.04.08 @OpenWrt R26.02.20
+# 我们重写整行，彻底去掉原有的 %D %R，防止出现 "%D LEDE" 的显示错误
+sed -i "s|DISTRIB_DESCRIPTION='.*'|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @$op_dist $lean_r_ver'|g" package/lean/default-settings/files/zzz-default-settings
 
-# --- 修改 Argon 主题页脚 ---
+# --- 3. 修改 LuCI 尾巴 (后半部分替换) ---
+# 这样原本显示 "/ LuCI ..." 的位置会变成 "/ Lede - 24.10"
+sed -i "s|/ LuCI .*|/ Lede - $build_name|g" package/base-files/files/bin/config_generate
+
+# --- 4. 修改 Argon 主题页脚和登录页 ---
 cp -f $GITHUB_WORKSPACE/personal/argon/footer.ut package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 cp -f $GITHUB_WORKSPACE/personal/argon/footer_login.ut package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 
-# 4. 统一替换占位符
-# 目标：将 "${build_date} @OpenWrt %R" 整体替换为 "R2026.04.07 @OpenWrt R26.02.20"
-# 这样可以完美处理掉 footer.ut 原本自带的 %R 符号 
+# 统一替换页脚占位符 (显示：Lede by ranqw R2026.04.08 @OpenWrt R26.02.20)
 sed -i "s|\${build_date} @OpenWrt %R|R$build_date @$op_dist $lean_r_ver|g" package/luci-theme-argon/ucode/template/themes/argon/footer*.ut
 
 # 修改欢迎banner
