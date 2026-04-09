@@ -234,23 +234,37 @@ jobs:
         name: ${{ env.FILE_NAME }}-${{ env.KERNEL }}-bin-${{ env.FILE_DATE }}
         path: openwrt/bin
 
-    - name: 整理文件
-      id: organize
+    - name: 准备发布变量
+      id: variables
       if: steps.compile.outputs.status == 'success' && !cancelled()
       run: |
+        # 1. 进入目标目录提取内核版本
         cd openwrt/bin/targets/*/*
-        echo "KERNEL=$(cat *.manifest | grep ^kernel | cut -d- -f2 | tr -d ' ')" >> $GITHUB_ENV
-        mv openwrt-x86-64-generic-squashfs-combined.img.gz ${{ env.FILE_NAME }}-${{ env.FILE_DATE }}-bios.img.gz
-        mv openwrt-x86-64-generic-squashfs-combined-efi.img.gz ${{ env.FILE_NAME }}-${{ env.FILE_DATE }}-uefi.img.gz
-        rm -rf config.buildinfo
-        rm -rf feeds.buildinfo
-        rm -rf openwrt-x86-64-generic-kernel.bin
-        rm -rf openwrt-x86-64-generic-squashfs-rootfs.img.gz
-        rm -rf openwrt-x86-64-generic.manifest
-        rm -rf profiles.json
-        rm -rf version.buildinfo
-        rm -rf sha256sums
-        rm -rf packages
+        KERNEL_VER=$(cat *.manifest | grep ^kernel | cut -d- -f2 | tr -d ' ')
+        echo "KERNEL=$KERNEL_VER" >> $GITHUB_ENV
+        
+        # 2. 提取默认 IP 地址
+        LAN_IP=$(grep "192.168" $GITHUB_WORKSPACE/openwrt/package/base-files/files/bin/config_generate | head -n1 | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
+        echo "LAN_IP=$LAN_IP" >> $GITHUB_ENV
+        
+        # 3. 从 diy-part2.sh 提取 build_name (如 24.10)
+        BUILD_VER=$(grep "build_name=" $GITHUB_WORKSPACE/${{ env.DIY_P2_SH }} | cut -d'"' -f2)
+        echo "BUILD_VER=$BUILD_VER" >> $GITHUB_ENV
+        
+        # 4. 生成短日期和架构
+        echo "SHORT_DATE=$(date +%y.%m.%d)" >> $GITHUB_ENV
+        echo "ARCH=x86-64" >> $GITHUB_ENV
+
+    - name: 整理文件
+      id: organize
+      if: steps.variables.outcome == 'success' && !cancelled()
+      run: |
+        cd openwrt/bin/targets/*/*
+        # 使用上面定义的全局变量进行重命名
+        mv openwrt-x86-64-generic-squashfs-combined.img.gz ${{ env.FILE_NAME }}-${{ env.BUILD_VER }}-${{ env.KERNEL }}-${{ env.ARCH }}-${{ env.SHORT_DATE }}-bios.img.gz
+        mv openwrt-x86-64-generic-squashfs-combined-efi.img.gz ${{ env.FILE_NAME }}-${{ env.BUILD_VER }}-${{ env.KERNEL }}-${{ env.ARCH }}-${{ env.SHORT_DATE }}-uefi.img.gz
+        
+        rm -rf config.buildinfo feeds.buildinfo *.manifest profiles.json version.buildinfo sha256sums packages *.bin
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
         echo "status=success" >> $GITHUB_OUTPUT
 
@@ -265,25 +279,26 @@ jobs:
       id: tag
       if: ${{ env.UPLOAD_RELEASE == 'true' && steps.organize.outputs.status == 'success' && !cancelled() }}
       run: |
-        : > "$GITHUB_OUTPUT"  # 清空旧输出，避免重复触发旧变量
+        # 1. 生成唯一的发布标签（带分钟，防止重复）
         release_tag=$(date +"%Y.%m.%d-%H.%M")
         release_date=$(date +"%Y-%m-%d %H:%M")
         echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
         echo "release_date=$release_date" >> "$GITHUB_OUTPUT"
-        echo "status=success" >> "$GITHUB_OUTPUT"
-        # 🔽 添加发布页说明
-        echo "  ### 📒 固件信息 📒 ###  " >> release.txt
+
+        # 2. 写入动态说明文件 (release.txt)
+        echo "### 📒 固件信息" >> release.txt
         echo "- 🎯 固件名称：${{ env.FILE_NAME }}" >> release.txt
-        echo "- 💄 LUCI版本：24.10 " >> release.txt
-        echo "- 🚀 内核版本：${{ env.KERNEL }} " >> release.txt
-        echo "- 💻 平台架构：${{ env.PRODUCT_NAME }} " >> release.txt
-        echo "- 💝 源码分支：${{ env.REPO_BRANCH }} " >> release.txt
-        echo "- 🌐 默认地址：192.168.23.250 " >> release.txt
-        echo "- 🧑‍💼 默认账号：root " >> release.txt
-        echo "- 🔑 默认密码：无密码 " >> release.txt
+        echo "- 💄 固件版本：${{ env.BUILD_VER }}" >> release.txt
+        echo "- 🚀 内核版本：${{ env.KERNEL }}" >> release.txt
+        echo "- 💻 平台架构：${{ env.PRODUCT_NAME }}" >> release.txt
+        echo "- 🌐 默认地址：${{ env.LAN_IP }}" >> release.txt
+        echo "- 🧑‍💼 默认账号：root" >> release.txt
+        echo "- 🔑 默认密码：无密码" >> release.txt
         echo "- 📅 编译时间：$release_date" >> release.txt
         echo "----------------------------------------" >> release.txt
         echo "- ⚽ 编译日志请查看 Actions 构建详情" >> release.txt
+        
+        echo "status=success" >> "$GITHUB_OUTPUT"
     - name: 上传固件至Release
       uses: softprops/action-gh-release@v2
       if: ${{ env.UPLOAD_RELEASE == 'true' && steps.tag.outputs.status == 'success' && !cancelled() }}
@@ -325,7 +340,7 @@ jobs:
         💻 平台架构: ${{ env.PRODUCT_NAME }}
         🧱 固件源码: ${{ env.REPO_URL }}
         🌿 源码分支: ${{ env.REPO_BRANCH }}
-        🌐 默认地址: 192.168.23.250
+        🌐 默认地址: ${{ env.LAN_IP }}
         👤 用户名: root
         🔑 密码: 无
         📦 下载地址: https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.release_tag }}"
@@ -342,7 +357,7 @@ jobs:
         💻 平台架构: ${{ env.PRODUCT_NAME }}
         🧱 固件源码: ${{ env.REPO_URL }}
         🌿 源码分支: ${{ env.REPO_BRANCH }}
-        🌐 默认地址: 192.168.23.250
+        🌐 默认地址: ${{ env.LAN_IP }}
         👤 用户名: root
         🔑 密码: 无
         📦 下载地址: https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.release_tag }}"
