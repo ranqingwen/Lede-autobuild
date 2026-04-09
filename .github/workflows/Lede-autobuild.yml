@@ -251,8 +251,8 @@ jobs:
         BUILD_VER=$(grep "build_name=" $GITHUB_WORKSPACE/${{ env.DIY_P2_SH }} | cut -d'"' -f2)
         echo "BUILD_VER=$BUILD_VER" >> $GITHUB_ENV
         
-        # 4. 生成短日期和架构
-        echo "SHORT_DATE=$(date +%y.%m.%d)" >> $GITHUB_ENV
+        # 4. 生成日期和架构 (修改日期格式为 MM.DD-HHmm)
+        echo "SHORT_DATE=$(date +%m.%d-%H%M)" >> $GITHUB_ENV
         echo "ARCH=x86-64" >> $GITHUB_ENV
 
     - name: 整理文件
@@ -260,10 +260,15 @@ jobs:
       if: steps.variables.outcome == 'success' && !cancelled()
       run: |
         cd openwrt/bin/targets/*/*
-        # 使用上面定义的全局变量进行重命名
+        
+        # 删除不需要的 rootfs 文件
+        rm -f openwrt-x86-64-generic-squashfs-rootfs.img.gz
+        
+        # 使用新定义的变量重命名 (此时 SHORT_DATE 已经是 04.09-时间 格式)
         mv openwrt-x86-64-generic-squashfs-combined.img.gz ${{ env.FILE_NAME }}-${{ env.BUILD_VER }}-${{ env.KERNEL }}-${{ env.ARCH }}-${{ env.SHORT_DATE }}-bios.img.gz
         mv openwrt-x86-64-generic-squashfs-combined-efi.img.gz ${{ env.FILE_NAME }}-${{ env.BUILD_VER }}-${{ env.KERNEL }}-${{ env.ARCH }}-${{ env.SHORT_DATE }}-uefi.img.gz
         
+        # 清理其他杂物
         rm -rf config.buildinfo feeds.buildinfo *.manifest profiles.json version.buildinfo sha256sums packages *.bin
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
         echo "status=success" >> $GITHUB_OUTPUT
