@@ -12,10 +12,6 @@
 
 echo "开始 DIY2 配置……"
 echo "========================="
-build_date=$(TZ=Asia/Shanghai date "+%Y.%m.%d")
-build_name="24.10"
-
-
 # 修改主机名字，修改你喜欢的就行（不能纯数字或者使用中文）
 sed -i "/uci commit system/i\uci set system.@system[0].hostname='OpenWrt'" package/lean/default-settings/files/zzz-default-settings
 sed -i "s/hostname='.*'/hostname='OpenWrt'/g" ./package/base-files/files/bin/config_generate
@@ -46,47 +42,37 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/*/Make
 # 更改argon主题背景
 cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
 
-# 获取发行版 ID (如 OpenWrt)
-op_dist=$(grep "DISTRIB_ID=" package/base-files/files/etc/openwrt_release | cut -d"'" -f2)
-[ -z "$op_dist" ] && op_dist="OpenWrt"
+# --- 1. 定义与抓取变量 ---
+build_date=$(TZ=Asia/Shanghai date "+%Y.%m.%d")
+build_name="24.10"
 
-# 精准获取 Lean 的 Rxx.xx.xx 版本号
+# 动态抓取 Lean 的 Rxx.xx.xx 版本号
 lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
-[ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
+[ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20" # 没抓到时的保底值
 
-# --- 2. 修改系统首页版本信息 (zzz-default-settings) ---
-# 将整行重写为：Lede by ranqw R年.月.日 @OpenWrt Rxx.xx.xx / Lede - 24.10
-sed -i "s|DISTRIB_DESCRIPTION='.*'|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @$op_dist $lean_r_ver / Lede - $build_name'|g" package/lean/default-settings/files/zzz-default-settings
+# --- 2. 修改系统首页显示的固件版本 ---
+# 目标格式：Lede by ranqw R2026.04.09 @OpenWrt R26.02.20 / Lede - 24.10
+sed -i "s|DISTRIB_DESCRIPTION='.*'|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @OpenWrt $lean_r_ver / Lede - $build_name'|g" package/lean/default-settings/files/zzz-default-settings
 
-# --- 3. 额外清理：强力去除残留的 LEDE 标识 ---
-# 防止源码中自带的 %D 占位符导致多出重复的 "LEDE" 字样
-sed -i "s|%D LEDE||g" package/lean/default-settings/files/zzz-default-settings
-
-# --- 4. 修改 LuCI 界面版本后缀 (防止右上方显示 Git 乱码) ---
-# 替换后的效果：/ Lede - 24.10
-sed -i "s|/ LuCI .*'|/ Lede - $build_name'|g" package/base-files/files/bin/config_generate
-# 同时也修改 LuCI 源码里的版本后缀
-find feeds/luci -name version.lua -exec sed -i "s|git-.*'|Lede - $build_name'|g" {} +
-
-# --- 5. 替换 Argon 主题页脚 (右下角显示) ---
-# 兼容新旧路径，直接定位 argon 模板目录
+# --- 3. 替换 Argon 主题页脚 (右下角显示) ---
 ARGON_PATH=$(find package -name argon -type d -path "*/luci-theme-argon/*template*" | head -n1)
 
 if [ -n "$ARGON_PATH" ]; then
-    echo "找到 Argon 模板路径: $ARGON_PATH"
-    cp -f $GITHUB_WORKSPACE/footer.ut "$ARGON_PATH/footer.ut"
-    cp -f $GITHUB_WORKSPACE/footer_login.ut "$ARGON_PATH/footer_login.ut"
+    echo "正在从 personal/argon 复制页脚模板..."
     
-    # 批量替换模板中的占位符
-    sed -i "s|\${build_date}|R$build_date|g" "$ARGON_PATH"/footer*.ut
-    sed -i "s|@OpenWrt|@$op_dist|g" "$ARGON_PATH"/footer*.ut
-    sed -i "s|%R|$lean_r_ver|g" "$ARGON_PATH"/footer*.ut
+    # 修正路径：确保脚本能找到位于 personal/argon 下的文件
+    cp -f personal/argon/footer.ut "$ARGON_PATH/footer.ut"
+    cp -f personal/argon/footer_login.ut "$ARGON_PATH/footer_login.ut"
+    
+    # 统一替换模板中的占位符
+    sed -i "s|\${build_date}|$build_date|g" "$ARGON_PATH"/footer*.ut
+    sed -i "s|\${lean_ver}|$lean_r_ver|g" "$ARGON_PATH"/footer*.ut
 else
-    echo "警告: 未找到 Argon 模板路径，跳过页脚替换。"
+    echo "警告: 未找到 Argon 模板路径"
 fi
 
-# 修改欢迎banner
-cp -f $GITHUB_WORKSPACE/personal/banner package/base-files/files/etc/banner
+# --- 4. 清理右上角 Git 乱码 ---
+sed -i "s|DISTRIB_REVISION='.*'|DISTRIB_REVISION=''|g" package/base-files/files/bin/config_generate
 
 # 修复 netdata 不会自动启动的问题
 echo ">>> Fix netdata init.d & enable service"
