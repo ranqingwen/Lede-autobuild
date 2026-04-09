@@ -251,8 +251,8 @@ jobs:
         BUILD_VER=$(grep "build_name=" $GITHUB_WORKSPACE/${{ env.DIY_P2_SH }} | cut -d'"' -f2)
         echo "BUILD_VER=$BUILD_VER" >> $GITHUB_ENV
         
-        # 4. 生成日期和架构 (修改日期格式为 MM.DD-HHmm)
-        echo "SHORT_DATE=$(date +%m.%d-%H%M)" >> $GITHUB_ENV
+        # 4. 生成日期和架构 (修改日期格式为 MM.DD-HH.mm)
+        echo "SHORT_DATE=$(date +%m.%d-%H.%M)" >> $GITHUB_ENV
         echo "ARCH=x86-64" >> $GITHUB_ENV
 
     - name: 整理文件
