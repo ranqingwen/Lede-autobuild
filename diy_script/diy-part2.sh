@@ -54,27 +54,35 @@ op_dist=$(grep "DISTRIB_ID=" package/base-files/files/etc/openwrt_release | cut 
 lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
 [ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
 
-# --- 2. 修改系统首页版本信息 ---
-# 这一步先把整行重写为你要求的格式
-sed -i "s|DISTRIB_DESCRIPTION='.*'|DISTRIB_DESCRIPTION='Lede by ranqw $build_date @$op_dist $lean_r_ver / Lede - $build_name'|g" package/lean/default-settings/files/zzz-default-settings
+# --- 2. 修改系统首页版本信息 (zzz-default-settings) ---
+# 将整行重写为：Lede by ranqw R年.月.日 @OpenWrt Rxx.xx.xx / Lede - 24.10
+sed -i "s|DISTRIB_DESCRIPTION='.*'|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @$op_dist $lean_r_ver / Lede - $build_name'|g" package/lean/default-settings/files/zzz-default-settings
 
-# --- 3. 额外清理：强力去除残留的 LEDE 标识 (这就是你问的那行) ---
-# 防止某些地方依然引用了旧的变量导致多出 "LEDE" 字样
+# --- 3. 额外清理：强力去除残留的 LEDE 标识 ---
+# 防止源码中自带的 %D 占位符导致多出重复的 "LEDE" 字样
 sed -i "s|%D LEDE||g" package/lean/default-settings/files/zzz-default-settings
 
-# --- 4. 修改 LuCI 界面版本后缀 (去右上角 Git 乱码) ---
+# --- 4. 修改 LuCI 界面版本后缀 (防止右上方显示 Git 乱码) ---
+# 替换后的效果：/ Lede - 24.10
 sed -i "s|/ LuCI .*'|/ Lede - $build_name'|g" package/base-files/files/bin/config_generate
+# 同时也修改 LuCI 源码里的版本后缀
+find feeds/luci -name version.lua -exec sed -i "s|git-.*'|Lede - $build_name'|g" {} +
 
 # --- 5. 替换 Argon 主题页脚 (右下角显示) ---
-ARGON_PATH="package/luci-theme-argon/ucode/template/themes/argon"
-if [ -d "$ARGON_PATH" ]; then
-    cp -f $GITHUB_WORKSPACE/footer.ut $ARGON_PATH/footer.ut
-    cp -f $GITHUB_WORKSPACE/footer_login.ut $ARGON_PATH/footer_login.ut
+# 兼容新旧路径，直接定位 argon 模板目录
+ARGON_PATH=$(find package -name argon -type d -path "*/luci-theme-argon/*template*" | head -n1)
+
+if [ -n "$ARGON_PATH" ]; then
+    echo "找到 Argon 模板路径: $ARGON_PATH"
+    cp -f $GITHUB_WORKSPACE/footer.ut "$ARGON_PATH/footer.ut"
+    cp -f $GITHUB_WORKSPACE/footer_login.ut "$ARGON_PATH/footer_login.ut"
     
     # 批量替换模板中的占位符
-    sed -i "s|\${build_date}|$build_date|g" $ARGON_PATH/footer*.ut
-    sed -i "s|@OpenWrt|@$op_dist|g" $ARGON_PATH/footer*.ut
-    sed -i "s|%R|$lean_r_ver|g" $ARGON_PATH/footer*.ut
+    sed -i "s|\${build_date}|R$build_date|g" "$ARGON_PATH"/footer*.ut
+    sed -i "s|@OpenWrt|@$op_dist|g" "$ARGON_PATH"/footer*.ut
+    sed -i "s|%R|$lean_r_ver|g" "$ARGON_PATH"/footer*.ut
+else
+    echo "警告: 未找到 Argon 模板路径，跳过页脚替换。"
 fi
 
 # 修改欢迎banner
