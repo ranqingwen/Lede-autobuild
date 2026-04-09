@@ -44,31 +44,42 @@ sed -i 's/Bootstrap theme/Argon theme/g' feeds/luci/collections/*/Makefile
 sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/*/Makefile
 
 # 更改argon主题背景
-# cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
+cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
 
-# --- 1. 定义和获取变量 ---
-# 获取发行版 ID (通常是 OpenWrt)
+# 获取发行版 ID (如 OpenWrt)
 op_dist=$(grep "DISTRIB_ID=" package/base-files/files/etc/openwrt_release | cut -d"'" -f2)
 
-# 动态获取 Lean 原始版本号 (精准获取 Rxx.xx.xx 格式)
-# 使用 -oE 正则匹配 R 开头后面带数字点的字符串，这样最稳，不会抓到前面的 LEDE 或 OpenWrt
-lean_r_ver=$(grep -oE "R[0-9]+\.[0-9]+\.[0-9]+" package/lean/default-settings/files/zzz-default-settings)
+# 精准获取 Lean 的 Rxx.xx.xx 版本号 (从 zzz-default-settings 中提取)
+# 注意：这一步很关键，如果提取失败则给予默认值
+lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
+[ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
 
-# --- 2. 修改系统概览页面 (首页前半部分) ---
-# 目标：Lede by ranqw R2026.04.08 @OpenWrt R26.02.20
-# 我们重写整行，彻底去掉原有的 %D %R，防止出现 "%D LEDE" 的显示错误
-sed -i "s|DISTRIB_DESCRIPTION='.*'|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @$op_dist $lean_r_ver'|g" package/lean/default-settings/files/zzz-default-settings
+# --- 2. 修改系统概览页面版本号 (Firmware Version) ---
+# 目标：Lede by ranqw 2026.04.09 @OpenWrt R26.02.20 / Lede - 24.10
+# 我们直接重写 DISTRIB_DESCRIPTION 这一行
+sed -i "s|DISTRIB_DESCRIPTION='.*'|DISTRIB_DESCRIPTION='Lede by ranqw $build_date @$op_dist $lean_r_ver / Lede - $build_name'|g" package/lean/default-settings/files/zzz-default-settings
 
-# --- 3. 修改 LuCI 尾巴 (后半部分替换) ---
-# 这样原本显示 "/ LuCI ..." 的位置会变成 "/ Lede - 24.10"
-sed -i "s|/ LuCI .*|/ Lede - $build_name|g" package/base-files/files/bin/config_generate
+# --- 3. 修改 LuCI 版本后缀 (彻底移除 branch git 乱码) ---
+# 目标：将 / LuCI ... 替换为 / Lede - 24.10
+# 修改 config_generate 中的版本字符串定义
+sed -i "s|/ LuCI .*'|/ Lede - $build_name'|g" package/base-files/files/bin/config_generate
 
 # --- 4. 修改 Argon 主题页脚和登录页 ---
+# 先确保文件已拷贝
 cp -f $GITHUB_WORKSPACE/personal/argon/footer.ut package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 cp -f $GITHUB_WORKSPACE/personal/argon/footer_login.ut package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 
-# 统一替换页脚占位符 (显示：Lede by ranqw R2026.04.08 @OpenWrt R26.02.20)
-sed -i "s|\${build_date} @OpenWrt %R|R$build_date @$op_dist $lean_r_ver|g" package/luci-theme-argon/ucode/template/themes/argon/footer*.ut
+# 逐个替换占位符，避免因空格或特殊字符导致的匹配失败
+# 1. 替换日期变量
+sed -i "s|\${build_date}|$build_date|g" package/luci-theme-argon/ucode/template/themes/argon/footer*.ut
+# 2. 替换发行版 (OpenWrt)
+sed -i "s|@OpenWrt|@$op_dist|g" package/luci-theme-argon/ucode/template/themes/argon/footer*.ut
+# 3. 替换 R 版本号
+sed -i "s|%R|$lean_r_ver|g" package/luci-theme-argon/ucode/template/themes/argon/footer*.ut
+
+# (可选) 额外清理：防止某些主题残留的 LEDE 标识干扰
+sed -i "s|%D LEDE||g" package/lean/default-settings/files/zzz-default-settings
+
 
 # 修改欢迎banner
 cp -f $GITHUB_WORKSPACE/personal/banner package/base-files/files/etc/banner
