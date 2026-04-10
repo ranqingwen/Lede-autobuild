@@ -17,7 +17,7 @@ sed -i "/uci commit system/i\uci set system.@system[0].hostname='OpenWrt'" packa
 sed -i "s/hostname='.*'/hostname='OpenWrt'/g" ./package/base-files/files/bin/config_generate
 
 # 默认地址
-sed -i 's/192.168.1.1/192.168.23.254/g' package/base-files/files/bin/config_generate
+sed -i 's/192.168.1.1/192.168.23.250/g' package/base-files/files/bin/config_generate
 
 # 最大连接数修改为65535
 sed -i '/customized in this file/a net.netfilter.nf_conntrack_max=65535' package/base-files/files/etc/sysctl.conf
