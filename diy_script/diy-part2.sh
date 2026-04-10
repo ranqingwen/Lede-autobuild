@@ -46,12 +46,26 @@ cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-st
 build_date=$(TZ=Asia/Shanghai date "+%Y.%m.%d")
 build_name="24.10"
 
-# 修改编译修订版本号（显示增加编译时间）
-sed -i "s/DISTRIB_REVISION='R[0-9]\+\.[0-9]\+\.[0-9]\+'/DISTRIB_REVISION='$build_date'/g" package/lean/default-settings/files/zzz-default-settings
+# === 固件版本信息个性化修改脚本 ===
 
-# 修改系统名称显示（对应后台页面的版本名称部分）
-# 将 LEDE 替换为包含版本号和日期的完整格式：OpenWrt/Lede-${build_name} by ranqw R${build_date}
-sed -i "s|LEDE|Lede-${build_name} by ranqw |g" package/lean/default-settings/files/zzz-default-settings
+# 1. 动态抓取 Lean 源码原始版本号
+# 从系统设置文件中提取如 R24.11.11 格式的版本号，存入变量 lean_r_ver
+lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
+
+# 2. 版本号抓取保底机制
+# 如果因为源码更新导致没抓到版本号，则手动指定一个保底版本号，防止变量为空
+[ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
+
+# 3. 修改编译修订版本号 (DISTRIB_REVISION)
+# 作用：将固件内部的修订版本号直接替换为当前的编译日期，方便在控制台通过命令查看
+sed -i "s/DISTRIB_REVISION='R[0-9]\+\.[0-9]\+\.[0-9]\+'/DISTRIB_REVISION='R$build_date'/g" package/lean/default-settings/files/zzz-default-settings
+
+# 4. 暴力替换系统名称及描述 (核心修改点)
+# 作用：将文件中所有的 "LEDE" 字样，替换为包含自定义名称、作者、日期及底层源码版本的完整长字符串
+# 替换后显示效果：Lede [名称] by ranqw R[日期] @OpenWrt R[版本号]
+sed -i "s|LEDE|Lede ${build_name} by ranqw R$build_date @OpenWrt $lean_r_ver|g" package/lean/default-settings/files/zzz-default-settings
+
+# === 修改完成 ===
 
 # 覆盖 Argon 主题的页脚模板文件 [cite: 1, 5]
 # 将你自定义的 footer.ut 和 footer_login.ut 复制到源码目录中
