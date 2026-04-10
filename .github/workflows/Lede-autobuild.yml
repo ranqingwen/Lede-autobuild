@@ -285,7 +285,7 @@ jobs:
       if: ${{ env.UPLOAD_RELEASE == 'true' && steps.organize.outputs.status == 'success' && !cancelled() }}
       run: |
         # 1. 生成唯一的发布标签（带分钟，防止重复）
-        release_tag=$(date +"%Y.%m.%d-%H.%M")
+        release_tag=$(date +"%Y.%m.%d")
         release_date=$(date +"%Y-%m-%d %H:%M")
         echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
         echo "release_date=$release_date" >> "$GITHUB_OUTPUT"
