@@ -20,7 +20,7 @@
 <!-- added style="text-wrap: auto" but on this page it is still not the best solution. I will take it to consideration next time :) -->
 <footer style="text-wrap: auto">
 	<div>
-		<span>Lede by ranqw R${build_date} @OpenWrt ${lean_ver}</span>
+		<span>Lede by ranqw ${build_date} @OpenWrt %R</span>
 	</div>
 </footer>
 </div>

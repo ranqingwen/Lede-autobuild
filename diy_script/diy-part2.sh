@@ -46,33 +46,28 @@ cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-st
 build_date=$(TZ=Asia/Shanghai date "+%Y.%m.%d")
 build_name="24.10"
 
-# 动态抓取 Lean 的 Rxx.xx.xx 版本号
-lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
-[ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20" # 没抓到时的保底值
+# 修改编译修订版本号（显示增加编译时间）
+sed -i "s/DISTRIB_REVISION='R[0-9]\+\.[0-9]\+\.[0-9]\+'/DISTRIB_REVISION='$build_date'/g" package/lean/default-settings/files/zzz-default-settings
 
-# --- 2. 修改系统首页显示的固件版本 ---
-# 目标格式：Lede by ranqw R2026.04.09 @OpenWrt R26.02.20 / Lede - 24.10
-sed -i "s|DISTRIB_DESCRIPTION='.*'|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @OpenWrt $lean_r_ver / Lede - $build_name'|g" package/lean/default-settings/files/zzz-default-settings
+# 修改系统名称显示（对应后台页面的版本名称部分）
+# 将 LEDE 替换为包含版本号和日期的完整格式：OpenWrt/Lede-${build_name} by ranqw R${build_date}
+sed -i "s|LEDE|Lede-${build_name} by ranqw |g" package/lean/default-settings/files/zzz-default-settings
 
-# --- 3. 替换 Argon 主题页脚 (右下角显示) ---
-ARGON_PATH=$(find package -name argon -type d -path "*/luci-theme-argon/*template*" | head -n1)
+# 覆盖 Argon 主题的页脚模板文件 [cite: 1, 5]
+# 将你自定义的 footer.ut 和 footer_login.ut 复制到源码目录中
+cp -f $GITHUB_WORKSPACE/personal/argon/footer.ut package/luci-theme-argon/ucode/template/themes/argon/footer.ut
+cp -f $GITHUB_WORKSPACE/personal/argon/footer_login.ut package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 
-if [ -n "$ARGON_PATH" ]; then
-    echo "正在从 personal/argon 复制页脚模板..."
-    
-    # 修正路径：确保脚本能找到位于 personal/argon 下的文件
-    cp -f personal/argon/footer.ut "$ARGON_PATH/footer.ut"
-    cp -f personal/argon/footer_login.ut "$ARGON_PATH/footer_login.ut"
-    
-    # 统一替换模板中的占位符
-    sed -i "s|\${build_date}|$build_date|g" "$ARGON_PATH"/footer*.ut
-    sed -i "s|\${lean_ver}|$lean_r_ver|g" "$ARGON_PATH"/footer*.ut
-else
-    echo "警告: 未找到 Argon 模板路径"
-fi
+# 精确替换模板文件中的占位符
+# 匹配 footer.ut 和 footer_login.ut 中的 ${build_name} 和 ${build_date} 并替换为实际变量值 [cite: 1, 7]
+sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
+sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 
-# --- 4. 清理右上角 Git 乱码 ---
-sed -i "s|DISTRIB_REVISION='.*'|DISTRIB_REVISION=''|g" package/base-files/files/bin/config_generate
+sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+
+# 修改欢迎banner
+cp -f $GITHUB_WORKSPACE/personal/banner package/base-files/files/etc/banner
 
 # 修复 netdata 不会自动启动的问题
 echo ">>> Fix netdata init.d & enable service"

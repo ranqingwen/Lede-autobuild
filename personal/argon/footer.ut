@@ -20,7 +20,7 @@
 		<footer class="mobile-hide" style="text-wrap: auto">
 			<div class="footer-content" style="display: flex; flex-wrap: wrap; gap: 0.5em; justify-content: end;">
 
-				<span>Lede by ranqw R${build_date} @OpenWrt ${lean_ver}</span>
+				<span>Lede by ranqw ${build_date} @OpenWrt %R</span>
 
 				<span class="footer-separator">|</span>
 
