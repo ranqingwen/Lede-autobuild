@@ -50,29 +50,21 @@ build_name="24.10"
 
 # === 固件版本信息个性化修改脚本 ===
 
-# 1. 动态抓取 Lean 源码原始版本号
-# 从配置文件中提取类似 R24.11.11 的标识，存入 lean_r_ver 变量
+# 1. 动态抓取源码原始版本号
 lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
+[ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
 
-# 2. 版本号抓取保底机制
-# 如果源码更新导致正则失效，则手动指定一个保底版本号，防止变量为空
-[ -z "$lean_r_ver" ] && lean_r_ver="R2026.02.20"
+# 2. 核心修复：强制将修订号 (REVISION) 改为你指定的版本标签
+# 原理：源码原本会把这部分内容强行拼接到描述后面。
+# 我们通过把原本的 Luci/Git 信息整体替换为 "Lede - 24.10"，解决连体字问题。
+sed -i "s|DISTRIB_REVISION='.*'|DISTRIB_REVISION='Lede - $build_name'|g" package/lean/default-settings/files/zzz-default-settings
 
-# 3. 修改编译修订版本号 (DISTRIB_REVISION)
-# 作用：将固件内部的修订版本号直接替换为当前的编译日期
-# 目的：确保在 SSH 终端执行 status 或查看系统详情时，Revision 显示为最新日期
-sed -i "s/DISTRIB_REVISION='R[0-9]\+\.[0-9]\+\.[0-9]\+'/DISTRIB_REVISION='R$build_date'/g" package/lean/default-settings/files/zzz-default-settings
-
-# 4. 强制重写系统描述 (核心修改点：替换原有的 LuCI 冗余信息)
-# 原理说明：
-# 原本显示的 (LuCI openwrt-23.05 branch git-...) 是系统自动生成的版本元数据。
-# 下行代码通过匹配 DISTRIB_DESCRIPTION='.*'，即匹配整行引号内的所有内容。
-# 这样会将原本的 "LEDE" 单词及其后面长串的 LuCI Git 信息全部抹除，并按你的要求重新排列。
-# 最终显示效果：Lede by ranqw R2026.04.09 @OpenWrt R26.02.20 / Lede - 24.10
-sed -i "s|DISTRIB_DESCRIPTION='.*'|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @OpenWrt $lean_r_ver / Lede - $build_name'|g" package/lean/default-settings/files/zzz-default-settings
-
-# === 修改完成 ===
-
+# 3. 强制重写系统描述 (DESCRIPTION)
+# 作用：只保留作者、编译日期和源码版本，末尾不再手动加 $build_name。
+# 这样系统会自动衔接上面第 2 步定义的 "Lede - 24.10"，形成完美的空格分隔。
+# 在末尾增加 " / "，系统会自动把上面的 REVISION 接在这个斜杠后面
+# 效果：Lede by ranqw R2026.04.10 @OpenWrt R26.02.20 / Lede - 24.10
+sed -i "s|DISTRIB_DESCRIPTION='.*'|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @OpenWrt $lean_r_ver / '|g" package/lean/default-settings/files/zzz-default-settings
 
 # === Argon 主题页脚动态渲染脚本 ===
 
