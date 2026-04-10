@@ -42,43 +42,59 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/*/Make
 # 更改argon主题背景
 cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
 
-# --- 1. 定义与抓取变量 ---
+# --- 1. 环境与日期变量定义 ---
+# 获取当前日期，格式如 2026.04.10
 build_date=$(TZ=Asia/Shanghai date "+%Y.%m.%d")
+# 自定义版本名称
 build_name="24.10"
 
 # === 固件版本信息个性化修改脚本 ===
 
 # 1. 动态抓取 Lean 源码原始版本号
-# 从系统设置文件中提取如 R24.11.11 格式的版本号，存入变量 lean_r_ver
+# 从配置文件中提取类似 R24.11.11 的标识，存入 lean_r_ver 变量
 lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
 
 # 2. 版本号抓取保底机制
-# 如果因为源码更新导致没抓到版本号，则手动指定一个保底版本号，防止变量为空
-[ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
+# 如果源码更新导致正则失效，则手动指定一个保底版本号，防止变量为空
+[ -z "$lean_r_ver" ] && lean_r_ver="R2026.02.20"
 
 # 3. 修改编译修订版本号 (DISTRIB_REVISION)
-# 作用：将固件内部的修订版本号直接替换为当前的编译日期，方便在控制台通过命令查看
+# 作用：将固件内部的修订版本号直接替换为当前的编译日期
+# 目的：确保在 SSH 终端执行 status 或查看系统详情时，Revision 显示为最新日期
 sed -i "s/DISTRIB_REVISION='R[0-9]\+\.[0-9]\+\.[0-9]\+'/DISTRIB_REVISION='R$build_date'/g" package/lean/default-settings/files/zzz-default-settings
 
-# 4. 暴力替换系统名称及描述 (核心修改点)
-# 作用：将文件中所有的 "LEDE" 字样，替换为包含自定义名称、作者、日期及底层源码版本的完整长字符串
-# 替换后显示效果：Lede [名称] by ranqw R[日期] @OpenWrt R[版本号]
-sed -i "s|LEDE|Lede ${build_name} by ranqw R$build_date @OpenWrt $lean_r_ver|g" package/lean/default-settings/files/zzz-default-settings
+# 4. 强制重写系统描述 (核心修改点：替换原有的 LuCI 冗余信息)
+# 原理说明：
+# 原本显示的 (LuCI openwrt-23.05 branch git-...) 是系统自动生成的版本元数据。
+# 下行代码通过匹配 DISTRIB_DESCRIPTION='.*'，即匹配整行引号内的所有内容。
+# 这样会将原本的 "LEDE" 单词及其后面长串的 LuCI Git 信息全部抹除，并按你的要求重新排列。
+# 最终显示效果：Lede by ranqw R2026.04.09 @OpenWrt R26.02.20 / Lede - 24.10
+sed -i "s|DISTRIB_DESCRIPTION='.*'|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @OpenWrt $lean_r_ver / Lede - $build_name'|g" package/lean/default-settings/files/zzz-default-settings
 
 # === 修改完成 ===
 
-# 覆盖 Argon 主题的页脚模板文件 [cite: 1, 5]
-# 将你自定义的 footer.ut 和 footer_login.ut 复制到源码目录中
+
+# === Argon 主题页脚动态渲染脚本 ===
+
+# 1. 覆盖页脚模板文件
+# 保持 .ut 文件内的 ${变量名} 占位符不变，直接复制到源码目录
 cp -f $GITHUB_WORKSPACE/personal/argon/footer.ut package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 cp -f $GITHUB_WORKSPACE/personal/argon/footer_login.ut package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 
-# 精确替换模板文件中的占位符
-# 匹配 footer.ut 和 footer_login.ut 中的 ${build_name} 和 ${build_date} 并替换为实际变量值 [cite: 1, 7]
+# 2. 精确替换模板中的三个动态变量
+# 通过 sed 将 .ut 文件里的占位符强行替换为脚本开头抓取到的实际变量值
+# 这样你改一次脚本顶部的变量，页脚就会跟着自动变，不需要去动 .ut 文件
+
+# 渲染 footer.ut (主界面页脚)
 sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
+sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 
+# 渲染 footer_login.ut (登录界面页脚)
 sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+
 
 # 修改欢迎banner
 cp -f $GITHUB_WORKSPACE/personal/banner package/base-files/files/etc/banner
