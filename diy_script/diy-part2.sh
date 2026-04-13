@@ -48,25 +48,28 @@ build_date=$(TZ=Asia/Shanghai date "+%Y.%m.%d")
 # 自定义版本名称
 build_name="24.10"
 
-# === 固件版本信息个性化修改脚本 ===
+# === 固件版本信息彻底纯净修改 ===
 
-# 1. 动态抓取源码原始版本号
+# 抓取 Lean 原始版本号 (如 R26.02.20)
 lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
-[ -z "$lean_r_ver" ] && lean_r_ver="R2026.02.20"
+[ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
 
-# 2. 清理源码中所有对版本号的操作，防止它自动拼接 LuCI 分支信息
+# 2. 彻底粉碎 zzz-default-settings 中原本对版本的修改逻辑
+# 这步非常关键：直接删掉所有包含 DISTRIB_REVISION 和 DISTRIB_DESCRIPTION 的行
+# 这样它就不会再把 "/ LuCI openwrt-23.05..." 那串东西强行塞进修订号了
 sed -i '/DISTRIB_REVISION/d' package/lean/default-settings/files/zzz-default-settings
 sed -i '/DISTRIB_DESCRIPTION/d' package/lean/default-settings/files/zzz-default-settings
 
-# 3. 在 uci commit system 之前插入精确的定义
-# 注意：这里我们只写入变量值，不带斜杠
-sed -i "/uci commit system/i\sed -i \"s|DISTRIB_REVISION=.*|DISTRIB_REVISION='Lede - $build_name'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
-sed -i "/uci commit system/i\sed -i \"s|DISTRIB_DESCRIPTION=.*|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @OpenWrt $lean_r_ver'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
+# 3. 在 zzz-default-settings 的最后（exit 0 之前）强行注入我们的纯净赋值
+# 这种方式优先级最高，且变量内不含任何斜杠
+sed -i "/exit 0/i sed -i \"s|DISTRIB_DESCRIPTION=.*|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @OpenWrt $lean_r_ver'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
+sed -i "/exit 0/i sed -i \"s|DISTRIB_REVISION=.*|DISTRIB_REVISION='Lede - $build_name'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
 
-# 4. 修改 LuCI 页面渲染逻辑 (这是实现“中间有斜杠”的关键)
-# 它会在显示时把 Description 和 Revision 用 " / " 连接起来，而不改动变量本身
+# 4. 修改 LuCI 页面渲染代码 (实现“网页显示有斜杠”的关键)
+# 它会在显示时自动把两个变量用 " / " 连接，而不改动变量本身的内容
 js_file="feeds/luci/modules/luci-mod-status/htdocs/luci-static/resources/view/status/include/10_system.js"
 if [ -f "$js_file" ]; then
+    # 将原来的空格分隔替换为斜杠分隔
     sed -i "s/res.release.revision ? ' ' + res.release.revision : ''/res.release.revision ? ' \/ ' + res.release.revision : ''/g" "$js_file"
 fi
 
