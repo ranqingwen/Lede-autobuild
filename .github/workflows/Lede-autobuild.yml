@@ -86,7 +86,7 @@ jobs:
         remove-docker-images: 'true'
         
     - name: 检出代码
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6.0.2
 
     - name: 初始化环境
       env:
@@ -305,7 +305,7 @@ jobs:
         
         echo "status=success" >> "$GITHUB_OUTPUT"
     - name: 上传固件至Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       if: ${{ env.UPLOAD_RELEASE == 'true' && steps.tag.outputs.status == 'success' && !cancelled() }}
       env:
         GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -318,7 +318,7 @@ jobs:
 
     # 重点 1：根据输入的 keep_releases 清理 Release
     - name: 清理旧的 Releases 记录
-      uses: dev-drprasad/delete-older-releases@v0.3.3
+      uses: dev-drprasad/delete-older-releases@v0.3.4
       if: always()
       with:
         keep_latest: ${{ github.event.inputs.keep_releases || '3' }}
