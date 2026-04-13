@@ -50,19 +50,25 @@ build_name="24.10"
 
 # === 固件版本信息个性化修改脚本 ===
 
-# 1. 动态抓取源码原始版本号 (例如 R24.10.24)
+# 1. 动态抓取源码原始版本号
 lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
-[ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
+[ -z "$lean_r_ver" ] && lean_r_ver="R2026.02.20"
 
-# 2. 彻底清理并重写 zzz-default-settings 中的版本定义
-# 先删除所有涉及 DISTRIB_REVISION 和 DISTRIB_DESCRIPTION 的修改行，防止冲突
+# 2. 清理源码中所有对版本号的操作，防止它自动拼接 LuCI 分支信息
 sed -i '/DISTRIB_REVISION/d' package/lean/default-settings/files/zzz-default-settings
 sed -i '/DISTRIB_DESCRIPTION/d' package/lean/default-settings/files/zzz-default-settings
 
-# 3. 在 uci commit system 之前插入我们自定义的强行覆盖命令
-# 这里直接向 /etc/openwrt_release 写入最终值，不再由源码逻辑去拼接
-sed -i "/uci commit system/i\sed -i \"s|DISTRIB_REVISION=.*|DISTRIB_REVISION=' / Lede - $build_name'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
+# 3. 在 uci commit system 之前插入精确的定义
+# 注意：这里我们只写入变量值，不带斜杠
+sed -i "/uci commit system/i\sed -i \"s|DISTRIB_REVISION=.*|DISTRIB_REVISION='Lede - $build_name'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
 sed -i "/uci commit system/i\sed -i \"s|DISTRIB_DESCRIPTION=.*|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @OpenWrt $lean_r_ver'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
+
+# 4. 修改 LuCI 页面渲染逻辑 (这是实现“中间有斜杠”的关键)
+# 它会在显示时把 Description 和 Revision 用 " / " 连接起来，而不改动变量本身
+js_file="feeds/luci/modules/luci-mod-status/htdocs/luci-static/resources/view/status/include/10_system.js"
+if [ -f "$js_file" ]; then
+    sed -i "s/res.release.revision ? ' ' + res.release.revision : ''/res.release.revision ? ' \/ ' + res.release.revision : ''/g" "$js_file"
+fi
 
 # === Argon 主题页脚动态渲染脚本 ===
 
