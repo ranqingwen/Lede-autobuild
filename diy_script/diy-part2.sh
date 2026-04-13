@@ -50,21 +50,19 @@ build_name="24.10"
 
 # === 固件版本信息个性化修改脚本 ===
 
-# 1. 动态抓取源码原始版本号
+# 1. 动态抓取源码原始版本号 (例如 R24.10.24)
 lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
 [ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
 
-# 2. 核心修复：强制将修订号 (REVISION) 改为你指定的版本标签
-# 原理：源码原本会把这部分内容强行拼接到描述后面。
-# 我们通过把原本的 Luci/Git 信息整体替换为 "Lede - 24.10"，解决连体字问题。
-sed -i "s|DISTRIB_REVISION='.*'|DISTRIB_REVISION='Lede - $build_name'|g" package/lean/default-settings/files/zzz-default-settings
+# 2. 彻底清理并重写 zzz-default-settings 中的版本定义
+# 先删除所有涉及 DISTRIB_REVISION 和 DISTRIB_DESCRIPTION 的修改行，防止冲突
+sed -i '/DISTRIB_REVISION/d' package/lean/default-settings/files/zzz-default-settings
+sed -i '/DISTRIB_DESCRIPTION/d' package/lean/default-settings/files/zzz-default-settings
 
-# 3. 强制重写系统描述 (DESCRIPTION)
-# 作用：只保留作者、编译日期和源码版本，末尾不再手动加 $build_name。
-# 这样系统会自动衔接上面第 2 步定义的 "Lede - 24.10"，形成完美的空格分隔。
-# 在末尾增加 " / "，系统会自动把上面的 REVISION 接在这个斜杠后面
-# 效果：Lede by ranqw R2026.04.10 @OpenWrt R26.02.20 / Lede - 24.10
-sed -i "s|DISTRIB_DESCRIPTION='.*'|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @OpenWrt $lean_r_ver / '|g" package/lean/default-settings/files/zzz-default-settings
+# 3. 在 uci commit system 之前插入我们自定义的强行覆盖命令
+# 这里直接向 /etc/openwrt_release 写入最终值，不再由源码逻辑去拼接
+sed -i "/uci commit system/i\sed -i \"s|DISTRIB_REVISION=.*|DISTRIB_REVISION=' / Lede - $build_name'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
+sed -i "/uci commit system/i\sed -i \"s|DISTRIB_DESCRIPTION=.*|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @OpenWrt $lean_r_ver'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
 
 # === Argon 主题页脚动态渲染脚本 ===
 
