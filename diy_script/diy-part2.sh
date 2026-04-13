@@ -54,13 +54,13 @@ lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-setti
 
 
 # =========================================================
-# 2. 固件版本信息彻底纯净修改 (解决概览页粘连和后缀问题)
+# 2. 固件版本信息彻底纯净修改 (解决粘连、斜杠和后缀问题)
 # =========================================================
-# 彻底粉碎 zzz-default-settings 的干扰逻辑
+
+# A. 确保底层变量纯净 (保持你现在的逻辑，已经验证成功)
 sed -i '/DISTRIB_REVISION/d' package/lean/default-settings/files/zzz-default-settings
 sed -i '/DISTRIB_DESCRIPTION/d' package/lean/default-settings/files/zzz-default-settings
 
-# 创建首 boot 脚本，强刷 /etc/openwrt_release (变量内绝对不带斜杠)
 mkdir -p package/base-files/files/etc/uci-defaults
 cat << EOF > package/base-files/files/etc/uci-defaults/99-custom-version
 #!/bin/sh
@@ -72,9 +72,17 @@ exit 0
 EOF
 chmod +x package/base-files/files/etc/uci-defaults/99-custom-version
 
-# 修改 LuCI 渲染逻辑 (在网页显示时自动插斜杠)
+# B. 修改 LuCI 渲染逻辑 (这是解决“横线/表格感”和“后缀”的关键)
+# 我们直接强行改写 JS 文件中的显示表达式，不带任何 HTML 标签
 js_file="feeds/luci/modules/luci-mod-status/htdocs/luci-static/resources/view/status/include/10_system.js"
-[ -f "$js_file" ] && sed -i "s/res.release.revision ? ' ' + res.release.revision : ''/res.release.revision ? ' \/ ' + res.release.revision : ''/g" "$js_file"
+
+if [ -f "$js_file" ]; then
+    # 这一步非常暴力但也最有效：
+    # 1. 查找原本拼接 Description + Revision + Luciversion 的长串
+    # 2. 直接替换为 Description + ' / ' + Revision
+    # 3. 这样就彻底丢弃了 Luciversion (也就是那串 Git 后缀)
+    sed -i "s|res.release.description + (res.release.revision ? ' ' + res.release.revision : '') + (res.release.luciversion ? ' / ' + res.release.luciversion : '')|res.release.description + ' / ' + res.release.revision|g" "$js_file"
+fi
 
 
 # =========================================================
