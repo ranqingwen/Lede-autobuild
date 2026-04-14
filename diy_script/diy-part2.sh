@@ -44,44 +44,54 @@ cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-st
 
 
 # =========================================================
-# 1. 统一变量定义 (放在脚本最前面)
+# 1. 统一变量定义
 # =========================================================
 build_date=$(date +%Y.%m.%d)
 build_name="24.10"
 
-# === 固件版本信息个性化修改脚本 ===
-
-# 1. 动态抓取源码原始版本号 (例如 R24.10.24)
+# 动态抓取源码原始版本号 (例如 R26.02.20)
 lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
 [ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
 
-# 2. 彻底清理并重写 zzz-default-settings 中的版本定义
-# 先删除所有涉及 DISTRIB_REVISION 和 DISTRIB_DESCRIPTION 的修改行，防止冲突
+# =========================================================
+# 2. 修改系统版本显示 (彻底解决网页显示和横线问题)
+# =========================================================
+
+# A. 屏蔽 LuCI 脚本的自动拼接功能 (这是去除后缀和修复横线的核心)
+# 这一步会删掉 JS 脚本中拼接 " / LuCI openwrt-23.05..." 的逻辑
+# 这样网页就只会显示 DISTRIB_DESCRIPTION 里的内容，不会换行撑开边框
+find feeds/luci/ -type f -name "10_system.js" | xargs sed -i 's/ + " \/ " + luciversion//g'
+find feeds/luci/ -type f -name "10_system.js" | xargs sed -i 's/ + "\\n" + luciversion//g'
+find feeds/luci/ -type f -name "10_system.js" | xargs sed -i 's/ + luciversion//g'
+
+# B. 重写 zzz-default-settings 中的版本定义
+# 清理旧的修改行
 sed -i '/DISTRIB_REVISION/d' package/lean/default-settings/files/zzz-default-settings
 sed -i '/DISTRIB_DESCRIPTION/d' package/lean/default-settings/files/zzz-default-settings
 
-# 3. 在 uci commit system 之前插入我们自定义的强行覆盖命令
-# 这里直接向 /etc/openwrt_release 写入最终值，不再由源码逻辑去拼接
-sed -i "/uci commit system/i\sed -i \"s|DISTRIB_REVISION=.*|DISTRIB_REVISION=' / Lede - $build_name'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
-sed -i "/uci commit system/i\sed -i \"s|DISTRIB_DESCRIPTION=.*|DISTRIB_DESCRIPTION='Lede by ranqw R$build_date @OpenWrt $lean_r_ver'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
+# 构造你要求的完整字符串: Lede by ranqw R2026.04.14 @OpenWrt R26.02.20 / Lede - 24.10
+# 直接将整串内容塞进 DESCRIPTION，并清空 REVISION，确保单行显示无干扰
+final_description="Lede by ranqw R$build_date @OpenWrt $lean_r_ver / Lede - $build_name"
 
+sed -i "/uci commit system/i\sed -i \"s|DISTRIB_DESCRIPTION=.*|DISTRIB_DESCRIPTION='$final_description'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
+sed -i "/uci commit system/i\sed -i \"s|DISTRIB_REVISION=.*|DISTRIB_REVISION=''|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
 
 # =========================================================
-# 3. Argon 主题页脚动态渲染脚本 (使用上面定义好的变量)
+# 3. Argon 主题页脚同步 (使用上面定义好的变量)
 # =========================================================
-# 覆盖页脚模板文件
-cp -f $GITHUB_WORKSPACE/personal/argon/footer.ut package/luci-theme-argon/ucode/template/themes/argon/footer.ut
-cp -f $GITHUB_WORKSPACE/personal/argon/footer_login.ut package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
-
-# 渲染 footer.ut (由于变量里没斜杠，如果你想在页脚加斜杠，请确保 .ut 模板里写了 / )
-sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
-sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
-sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
+# 渲染 footer.ut
+if [ -f package/luci-theme-argon/ucode/template/themes/argon/footer.ut ]; then
+    sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
+    sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
+    sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
+fi
 
 # 渲染 footer_login.ut
-sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
-sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
-sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+if [ -f package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut ]; then
+    sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+    sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+    sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+fi
 
 
 # 修改欢迎banner
