@@ -53,38 +53,38 @@ lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-setti
 [ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
 
 # =========================================================
-# 2. 彻底解决显示后缀和边框问题 (终极核心修改)
+# 2. 彻底解决显示后缀和边框问题 (对齐1号固件逻辑)
 # =========================================================
 
 # 【A. 阻止 Lean 的 autocore 在编译期强行注入换行符 <br />】
-# 这是消灭“横线/边框”的最关键一步。直接删掉 Makefile 里制造换行的 sed 命令
+# 这一步是消灭“横线/边框”最关键的一刀
 find package/lean/autocore/ -type f -name "Makefile" | xargs -i sed -i '/<br \/>/d' {}
 
-# 【B. 精准修改 LuCI JS 原文件，彻底斩断 LuCI 版本号后缀】
-# 直接替换掉 10_system.js 中的完整三元表达式拼接逻辑
-# 原代码包含 boardinfo.luciname 等变量，我们将其一刀切，仅保留 release.description
-find feeds/luci/ -type f -name "10_system.js" | xargs -i sed -i "s/ + ' \/ ' : '') + (boardinfo.luciname ? boardinfo.luciname + ' ' + boardinfo.luciversion : '')/ : '')/g" {}
+# 【B. 精准修改 LuCI JS 原文件，将自定义后缀强制拼接到前端展示】
+# 这样不仅绕过了基础变量的污染，还能实现在状态概览页精准展示 "/ Lede - 24.10"
+find feeds/luci/ -type f -name "10_system.js" | xargs -i sed -i "s/ + ' \/ ' : '') + (boardinfo.luciname ? boardinfo.luciname + ' ' + boardinfo.luciversion : '')/ + ' \/ Lede - ${build_name}' : '')/g" {}
 
 # 【C. 重写 zzz-default-settings 中的版本定义】
-# 清理旧数据，防止重叠
-sed -i '/DISTRIB_REVISION/d' package/lean/default-settings/files/zzz-default-settings
+# 定义与 1 号固件一致的 DESCRIPTION（注意：结尾必须保留一个空格，用于连接 REVISION）
+custom_description="Lede by ranqw R${build_date} @OpenWrt "
+
+# 仅清理旧的 DESCRIPTION，坚决保留原生的 DISTRIB_REVISION，让系统能自然拼合类似 R26.02.20
 sed -i '/DISTRIB_DESCRIPTION/d' package/lean/default-settings/files/zzz-default-settings
 
-# 构造最终干净的字符串
-final_description="Lede by ranqw R$build_date @OpenWrt $lean_r_ver / Lede - $build_name"
+# 写入 openwrt_release 配置
+sed -i "/uci commit system/i\sed -i \"s|DISTRIB_DESCRIPTION=.*|DISTRIB_DESCRIPTION='\$custom_description'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
 
-# 写入配置文件，清空 REVISION，保证单行独占显示
-sed -i "/uci commit system/i\sed -i \"s|DISTRIB_DESCRIPTION=.*|DISTRIB_DESCRIPTION='$final_description'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
-sed -i "/uci commit system/i\sed -i \"s|DISTRIB_REVISION=.*|DISTRIB_REVISION=''|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
+# 同步写入 os-release 配置 (供底层和部分老主题识别)
+sed -i "/uci commit system/i\[ -f '/usr/lib/os-release' ] \&\& sed -i \"s|OPENWRT_RELEASE=.*|OPENWRT_RELEASE='\$custom_description'|g\" /usr/lib/os-release" package/lean/default-settings/files/zzz-default-settings
 
 # =========================================================
-# 3. Argon 主题页脚动态渲染脚本 (使用上面定义好的变量)
+# 3. Argon 主题页脚动态渲染脚本 (使用定义好的变量)
 # =========================================================
 # 覆盖页脚模板文件
 cp -f $GITHUB_WORKSPACE/personal/argon/footer.ut package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 cp -f $GITHUB_WORKSPACE/personal/argon/footer_login.ut package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 
-# 渲染 footer.ut (由于变量里没斜杠，如果你想在页脚加斜杠，请确保 .ut 模板里写了 / )
+# 渲染 footer.ut (由于变量里没斜杠，确保 .ut 模板里写了 / )
 sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
