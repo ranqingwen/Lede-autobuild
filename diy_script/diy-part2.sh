@@ -53,28 +53,34 @@ lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-setti
 [ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
 
 # =========================================================
-# 2. 彻底解决显示后缀和边框问题 (对齐1号固件逻辑)
+# 2. 彻底解决显示后缀和边框问题 (终极对齐1号固件逻辑)
 # =========================================================
 
 # 【A. 阻止 Lean 的 autocore 在编译期强行注入换行符 <br />】
-# 这一步是消灭“横线/边框”最关键的一刀
 find package/lean/autocore/ -type f -name "Makefile" | xargs -i sed -i '/<br \/>/d' {}
 
-# 【B. 精准修改 LuCI JS 原文件，将自定义后缀强制拼接到前端展示】
-# 这样不仅绕过了基础变量的污染，还能实现在状态概览页精准展示 "/ Lede - 24.10"
-find feeds/luci/ -type f -name "10_system.js" | xargs -i sed -i "s/ + ' \/ ' : '') + (boardinfo.luciname ? boardinfo.luciname + ' ' + boardinfo.luciversion : '')/ + ' \/ Lede - ${build_name}' : '')/g" {}
+# 【B. 降维打击：从 Lua 后端源头篡改 LuCI 版本名，彻底干掉 "LuCI openwrt-xxx branch"】
+# 这能保证 Bootstrap 和 OpenWrt 主题左下角显示出完美的 Powered by (Lede - 24.10)
+sed -i "s/PKG_VERSION:=.*/PKG_VERSION:=- ${build_name}/g" feeds/luci/modules/luci-base/Makefile
+sed -i 's/LUCI_NAME:=LuCI/LUCI_NAME:=Lede/g' feeds/luci/modules/luci-base/Makefile
+find feeds/luci/ -type f -name "version.lua" | xargs -i sed -i 's/luciname    = "LuCI"/luciname    = "Lede"/g' {}
+find feeds/luci/ -type f -name "version.lua" | xargs -i sed -i "s/luciversion = \".*\"/luciversion = \"- ${build_name}\"/g" {}
 
-# 【C. 重写 zzz-default-settings 中的版本定义】
-# 定义与 1 号固件一致的 DESCRIPTION（注意：结尾必须保留一个空格，用于连接 REVISION）
+# 【C. 降维打击：强行覆盖前端 JS 渲染变量】
+# 无论前端代码是用三元表达式还是 .format()，直接将变量替换为硬编码的 Lede 和 - 24.10
+# 配合底层的 R26.02.20，状态页会天然拼合出 / Lede - 24.10
+find . -type f -name "10_system.js" | xargs -i sed -i "s/boardinfo.luciname/'Lede'/g" {}
+find . -type f -name "10_system.js" | xargs -i sed -i "s/boardinfo.luciversion/'- ${build_name}'/g" {}
+
+# 【D. 恢复底层基础配置，补齐丢失的 Lede by ranqw 前缀】
+# 注意：结尾必须保留一个空格，不碰 REVISION，让系统自然拼合 R26.02.20
 custom_description="Lede by ranqw R${build_date} @OpenWrt "
 
-# 仅清理旧的 DESCRIPTION，坚决保留原生的 DISTRIB_REVISION，让系统能自然拼合类似 R26.02.20
+# 仅清理旧的 DESCRIPTION，坚决保留 REVISION 以防信息截断
 sed -i '/DISTRIB_DESCRIPTION/d' package/lean/default-settings/files/zzz-default-settings
 
-# 写入 openwrt_release 配置
+# 注入干净的系统前缀
 sed -i "/uci commit system/i\sed -i \"s|DISTRIB_DESCRIPTION=.*|DISTRIB_DESCRIPTION='\$custom_description'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
-
-# 同步写入 os-release 配置 (供底层和部分老主题识别)
 sed -i "/uci commit system/i\[ -f '/usr/lib/os-release' ] \&\& sed -i \"s|OPENWRT_RELEASE=.*|OPENWRT_RELEASE='\$custom_description'|g\" /usr/lib/os-release" package/lean/default-settings/files/zzz-default-settings
 
 # =========================================================
