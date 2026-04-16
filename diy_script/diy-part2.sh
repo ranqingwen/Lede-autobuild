@@ -53,52 +53,49 @@ lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-setti
 [ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
 
 # =========================================================
-# 2. 彻底解决显示后缀和边框问题 (终极物理文件劫持法)
+# 2. 彻底解决显示后缀和边框问题 (源码级硬核修改)
 # =========================================================
 
 # 【A. 阻止 Lean 的 autocore 在编译期强行注入换行符 <br />】
 find package/lean/autocore/ -type f -name "Makefile" | xargs -i sed -i '/<br \/>/d' {}
 
-# 【B. 修复系统前缀：利用追加指令保证最高优先级】
-# 解决只剩下 R26.02.20 的问题，将写入指令放在 zzz-default-settings 底部，防止被系统打包覆盖
+# 【B. 修复系统前缀：确保 /etc/openwrt_release 内容正确】
+# 这一步保证“固件版本”行的前半部分显示为：Lede by ranqw R2026.04.15 @OpenWrt R26.02.20
 custom_description="Lede by ranqw R${build_date} @OpenWrt "
-echo "sed -i \"s|DISTRIB_DESCRIPTION=.*|DISTRIB_DESCRIPTION='${custom_description}'|g\" /etc/openwrt_release" >> package/lean/default-settings/files/zzz-default-settings
-echo "sed -i \"s|DISTRIB_REVISION=.*|DISTRIB_REVISION='${lean_r_ver}'|g\" /etc/openwrt_release" >> package/lean/default-settings/files/zzz-default-settings
-echo "[ -f '/usr/lib/os-release' ] && sed -i \"s|OPENWRT_RELEASE=.*|OPENWRT_RELEASE='${custom_description}'|g\" /usr/lib/os-release" >> package/lean/default-settings/files/zzz-default-settings
+sed -i "s/DISTRIB_DESCRIPTION='.*'/DISTRIB_DESCRIPTION='${custom_description}'/g" package/lean/default-settings/files/zzz-default-settings
+sed -i "s/DISTRIB_REVISION='.*'/DISTRIB_REVISION='${lean_r_ver}'/g" package/lean/default-settings/files/zzz-default-settings
 
-# 【C. 终极一击：彻底消灭 LuCI openwrt-23.05 branch ... 】
-# 生成开机自启脚本，在系统内部强行篡改 Lua 和 ucode 后端的版本号输出。
-# 只要后台变量变成了 "Lede" 和 "- 24.10"，Bootstrap 和状态页就会自动完美拼合！
-mkdir -p package/base-files/files/etc/uci-defaults
-cat << EOF > package/base-files/files/etc/uci-defaults/99-fix-luci-version
-#!/bin/sh
-# 1. 替换旧版 Lua 核心的版本字符串
-if [ -f /usr/lib/lua/luci/version.lua ]; then
-    sed -i 's/luciname.*/luciname    = "Lede"/g' /usr/lib/lua/luci/version.lua
-    sed -i 's/luciversion.*/luciversion = "- ${build_name}"/g' /usr/lib/lua/luci/version.lua
+# 【C. 终极一击：直接修改 LuCI 源码，消灭 git-xxxx 分支信息】
+
+# 1. 处理 23.05+ 的 ucode 架构 (feeds/luci/modules/luci-base/ucode/version.uc)
+# 原理：直接把原本由 luci.mk 动态生成的 revision 和 branch 替换为固定值
+if [ -f "feeds/luci/modules/luci-base/ucode/version.uc" ]; then
+    echo "正在修改 version.uc 以移除 Git 后缀..."
+    # 替换 revision 为 'Lede'，替换 branch 为 '- 24.10'
+    sed -i "s/revision = .*,/revision = 'Lede',/g" feeds/luci/modules/luci-base/ucode/version.uc
+    sed -i "s/branch = .*/branch = '- ${build_name}';/g" feeds/luci/modules/luci-base/ucode/version.uc
 fi
-# 2. 替换新版 ucode 核心的版本字符串 (专治 23.05 分支)
-if [ -f /usr/share/ucode/luci/version.uc ]; then
-    sed -i 's/luciname.*/export const luciname = "Lede";/g' /usr/share/ucode/luci/version.uc
-    sed -i 's/luciversion.*/export const luciversion = "- ${build_name}";/g' /usr/share/ucode/luci/version.uc
+
+# 2. 处理旧版 Lua 架构 (feeds/luci/modules/luci-base/luasrc/version.lua)
+if [ -f "feeds/luci/modules/luci-base/luasrc/version.lua" ]; then
+    echo "正在修改 version.lua 以兼容旧架构..."
+    sed -i "s/luciname    = .*/luciname    = 'Lede'/g" feeds/luci/modules/luci-base/luasrc/version.lua
+    sed -i "s/luciversion = .*/luciversion = '- ${build_name}'/g" feeds/luci/modules/luci-base/luasrc/version.lua
 fi
-exit 0
-EOF
-chmod +x package/base-files/files/etc/uci-defaults/99-fix-luci-version
 
 # 【清理之前的 JS 篡改，恢复原生拼合逻辑】
-# 恢复 10_system.js 的原貌，让系统顺其自然地把我们改好的变量组合成 " / Lede - 24.10"
+# 既然我们已经把后端变量改好了，前端 JS 就会自动拼出 " / Lede - 24.10"
 git checkout feeds/luci/modules/luci-mod-system/htdocs/luci-static/resources/view/system/system.js 2>/dev/null
 git checkout feeds/luci/modules/luci-base/htdocs/luci-static/resources/luci.js 2>/dev/null
 
 # =========================================================
-# 3. Argon 主题页脚动态渲染脚本 (使用定义好的变量)
+# 3. Argon 主题页脚动态渲染
 # =========================================================
 # 覆盖页脚模板文件
 cp -f $GITHUB_WORKSPACE/personal/argon/footer.ut package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 cp -f $GITHUB_WORKSPACE/personal/argon/footer_login.ut package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 
-# 渲染 footer.ut (由于变量里没斜杠，确保 .ut 模板里写了 / )
+# 渲染 footer.ut
 sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
