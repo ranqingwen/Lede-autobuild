@@ -43,45 +43,40 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/*/Make
 cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
 
 # =========================================================
-# 1. 统一变量定义
+# 1. 统一变量定义（完全对齐1号固件逻辑）
 # =========================================================
 build_date=$(date +%Y.%m.%d)
 build_name="24.10"
-
-# 动态抓取源码原始版本号 (例如 R26.02.20)
+# 动态抓取源码原始版本号 (例如 R26.02.20)，无值则使用默认兜底
 lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
 [ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
+# 构造完整版本字符串（和1号固件显示完全一致）
+final_description="Lede by ranqw R${build_date} @OpenWrt ${lean_r_ver} / Lede - ${build_name}"
+# 拆分用于系统文件的基础字符串
+base_description="Lede by ranqw R${build_date} @OpenWrt "
 
 # =========================================================
-# 2. 彻底解决显示后缀和边框问题 (终极对齐1号固件逻辑)
+# 2. 彻底解决版本显示问题（对齐1号固件系统文件配置）
 # =========================================================
-
-# 【A. 阻止 Lean 的 autocore 在编译期强行注入换行符 <br />】
+# 【A. 阻止 Lean 的 autocore 在编译期强行注入换行符 <br />】（消灭横线/边框核心步骤）
 find package/lean/autocore/ -type f -name "Makefile" | xargs -i sed -i '/<br \/>/d' {}
 
-# 【B. 降维打击：从 Lua 后端源头篡改 LuCI 版本名，彻底干掉 "LuCI openwrt-xxx branch"】
-# 这能保证 Bootstrap 和 OpenWrt 主题左下角显示出完美的 Powered by (Lede - 24.10)
-sed -i "s/PKG_VERSION:=.*/PKG_VERSION:=- ${build_name}/g" feeds/luci/modules/luci-base/Makefile
-sed -i 's/LUCI_NAME:=LuCI/LUCI_NAME:=Lede/g' feeds/luci/modules/luci-base/Makefile
-find feeds/luci/ -type f -name "version.lua" | xargs -i sed -i 's/luciname    = "LuCI"/luciname    = "Lede"/g' {}
-find feeds/luci/ -type f -name "version.lua" | xargs -i sed -i "s/luciversion = \".*\"/luciversion = \"- ${build_name}\"/g" {}
+# 【B. 精准修改 LuCI 系统页版本显示】
+# 保留原生版本拼接逻辑，仅确保系统页显示完整的自定义版本，不破坏主题footer
+find feeds/luci/ -type f -name "10_system.js" | xargs -i sed -i "s/ + ' \/ ' : '') + (boardinfo.luciname ? boardinfo.luciname + ' ' + boardinfo.luciversion : '')/ : '')/g" {}
 
-# 【C. 降维打击：强行覆盖前端 JS 渲染变量】
-# 无论前端代码是用三元表达式还是 .format()，直接将变量替换为硬编码的 Lede 和 - 24.10
-# 配合底层的 R26.02.20，状态页会天然拼合出 / Lede - 24.10
-find . -type f -name "10_system.js" | xargs -i sed -i "s/boardinfo.luciname/'Lede'/g" {}
-find . -type f -name "10_system.js" | xargs -i sed -i "s/boardinfo.luciversion/'- ${build_name}'/g" {}
-
-# 【D. 恢复底层基础配置，补齐丢失的 Lede by ranqw 前缀】
-# 注意：结尾必须保留一个空格，不碰 REVISION，让系统自然拼合 R26.02.20
-custom_description="Lede by ranqw R${build_date} @OpenWrt "
-
-# 仅清理旧的 DESCRIPTION，坚决保留 REVISION 以防信息截断
+# 【C. 重写 zzz-default-settings 中的版本定义（核心修正，不再清空REVISION）】
+# 清理旧的版本配置，避免重叠
+sed -i '/DISTRIB_REVISION/d' package/lean/default-settings/files/zzz-default-settings
 sed -i '/DISTRIB_DESCRIPTION/d' package/lean/default-settings/files/zzz-default-settings
 
-# 注入干净的系统前缀
-sed -i "/uci commit system/i\sed -i \"s|DISTRIB_DESCRIPTION=.*|DISTRIB_DESCRIPTION='\$custom_description'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
-sed -i "/uci commit system/i\[ -f '/usr/lib/os-release' ] \&\& sed -i \"s|OPENWRT_RELEASE=.*|OPENWRT_RELEASE='\$custom_description'|g\" /usr/lib/os-release" package/lean/default-settings/files/zzz-default-settings
+# 写入系统版本配置，完全对齐1号固件的/etc/openwrt_release
+sed -i "/uci commit system/i\sed -i \"s|DISTRIB_DESCRIPTION=.*|DISTRIB_DESCRIPTION='$base_description'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
+sed -i "/uci commit system/i\sed -i \"s|DISTRIB_REVISION=.*|DISTRIB_REVISION='$lean_r_ver'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
+
+# 同步修改/etc/os-release，对齐1号固件的系统参数
+sed -i "/uci commit system/i\sed -i \"s|OPENWRT_RELEASE=.*|OPENWRT_RELEASE='$base_description'|g\" /usr/lib/os-release" package/lean/default-settings/files/zzz-default-settings
+sed -i "/uci commit system/i\sed -i \"s|PRETTY_NAME=.*|PRETTY_NAME='$final_description'|g\" /usr/lib/os-release" package/lean/default-settings/files/zzz-default-settings
 
 # =========================================================
 # 3. Argon 主题页脚动态渲染脚本 (使用定义好的变量)
