@@ -43,40 +43,53 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/*/Make
 cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
 
 # =========================================================
-# 1. 统一变量定义（完全对齐1号固件逻辑）
+# 1. 统一变量定义
 # =========================================================
 build_date=$(date +%Y.%m.%d)
 build_name="24.10"
-# 动态抓取源码原始版本号 (例如 R26.02.20)，无值则使用默认兜底
+
+# 动态抓取源码原始版本号 (例如 R26.02.20)
 lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
 [ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
-# 构造完整版本字符串（和1号固件显示完全一致）
-final_description="Lede by ranqw R${build_date} @OpenWrt ${lean_r_ver} / Lede - ${build_name}"
-# 拆分用于系统文件的基础字符串
-base_description="Lede by ranqw R${build_date} @OpenWrt "
 
 # =========================================================
-# 2. 彻底解决版本显示问题（对齐1号固件系统文件配置）
+# 2. 彻底解决显示后缀和边框问题 (终极物理文件劫持法)
 # =========================================================
-# 【A. 阻止 Lean 的 autocore 在编译期强行注入换行符 <br />】（消灭横线/边框核心步骤）
+
+# 【A. 阻止 Lean 的 autocore 在编译期强行注入换行符 <br />】
 find package/lean/autocore/ -type f -name "Makefile" | xargs -i sed -i '/<br \/>/d' {}
 
-# 【B. 精准修改 LuCI 系统页版本显示】
-# 保留原生版本拼接逻辑，仅确保系统页显示完整的自定义版本，不破坏主题footer
-find feeds/luci/ -type f -name "10_system.js" | xargs -i sed -i "s/ + ' \/ ' : '') + (boardinfo.luciname ? boardinfo.luciname + ' ' + boardinfo.luciversion : '')/ : '')/g" {}
+# 【B. 修复系统前缀：利用追加指令保证最高优先级】
+# 解决只剩下 R26.02.20 的问题，将写入指令放在 zzz-default-settings 底部，防止被系统打包覆盖
+custom_description="Lede by ranqw R${build_date} @OpenWrt "
+echo "sed -i \"s|DISTRIB_DESCRIPTION=.*|DISTRIB_DESCRIPTION='${custom_description}'|g\" /etc/openwrt_release" >> package/lean/default-settings/files/zzz-default-settings
+echo "sed -i \"s|DISTRIB_REVISION=.*|DISTRIB_REVISION='${lean_r_ver}'|g\" /etc/openwrt_release" >> package/lean/default-settings/files/zzz-default-settings
+echo "[ -f '/usr/lib/os-release' ] && sed -i \"s|OPENWRT_RELEASE=.*|OPENWRT_RELEASE='${custom_description}'|g\" /usr/lib/os-release" >> package/lean/default-settings/files/zzz-default-settings
 
-# 【C. 重写 zzz-default-settings 中的版本定义（核心修正，不再清空REVISION）】
-# 清理旧的版本配置，避免重叠
-sed -i '/DISTRIB_REVISION/d' package/lean/default-settings/files/zzz-default-settings
-sed -i '/DISTRIB_DESCRIPTION/d' package/lean/default-settings/files/zzz-default-settings
+# 【C. 终极一击：彻底消灭 LuCI openwrt-23.05 branch ... 】
+# 生成开机自启脚本，在系统内部强行篡改 Lua 和 ucode 后端的版本号输出。
+# 只要后台变量变成了 "Lede" 和 "- 24.10"，Bootstrap 和状态页就会自动完美拼合！
+mkdir -p package/base-files/files/etc/uci-defaults
+cat << EOF > package/base-files/files/etc/uci-defaults/99-fix-luci-version
+#!/bin/sh
+# 1. 替换旧版 Lua 核心的版本字符串
+if [ -f /usr/lib/lua/luci/version.lua ]; then
+    sed -i 's/luciname.*/luciname    = "Lede"/g' /usr/lib/lua/luci/version.lua
+    sed -i 's/luciversion.*/luciversion = "- ${build_name}"/g' /usr/lib/lua/luci/version.lua
+fi
+# 2. 替换新版 ucode 核心的版本字符串 (专治 23.05 分支)
+if [ -f /usr/share/ucode/luci/version.uc ]; then
+    sed -i 's/luciname.*/export const luciname = "Lede";/g' /usr/share/ucode/luci/version.uc
+    sed -i 's/luciversion.*/export const luciversion = "- ${build_name}";/g' /usr/share/ucode/luci/version.uc
+fi
+exit 0
+EOF
+chmod +x package/base-files/files/etc/uci-defaults/99-fix-luci-version
 
-# 写入系统版本配置，完全对齐1号固件的/etc/openwrt_release
-sed -i "/uci commit system/i\sed -i \"s|DISTRIB_DESCRIPTION=.*|DISTRIB_DESCRIPTION='$base_description'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
-sed -i "/uci commit system/i\sed -i \"s|DISTRIB_REVISION=.*|DISTRIB_REVISION='$lean_r_ver'|g\" /etc/openwrt_release" package/lean/default-settings/files/zzz-default-settings
-
-# 同步修改/etc/os-release，对齐1号固件的系统参数
-sed -i "/uci commit system/i\sed -i \"s|OPENWRT_RELEASE=.*|OPENWRT_RELEASE='$base_description'|g\" /usr/lib/os-release" package/lean/default-settings/files/zzz-default-settings
-sed -i "/uci commit system/i\sed -i \"s|PRETTY_NAME=.*|PRETTY_NAME='$final_description'|g\" /usr/lib/os-release" package/lean/default-settings/files/zzz-default-settings
+# 【清理之前的 JS 篡改，恢复原生拼合逻辑】
+# 恢复 10_system.js 的原貌，让系统顺其自然地把我们改好的变量组合成 " / Lede - 24.10"
+git checkout feeds/luci/modules/luci-mod-system/htdocs/luci-static/resources/view/system/system.js 2>/dev/null
+git checkout feeds/luci/modules/luci-base/htdocs/luci-static/resources/luci.js 2>/dev/null
 
 # =========================================================
 # 3. Argon 主题页脚动态渲染脚本 (使用定义好的变量)
