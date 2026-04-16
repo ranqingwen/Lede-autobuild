@@ -53,40 +53,56 @@ lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-setti
 [ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
 
 # =========================================================
-# 2. 彻底解决显示后缀和边框问题 (源码级硬核修改)
+# 2. 彻底解决显示后缀和边框问题 (终极全量覆写源文件法)
 # =========================================================
 
 # 【A. 阻止 Lean 的 autocore 在编译期强行注入换行符 <br />】
 find package/lean/autocore/ -type f -name "Makefile" | xargs -i sed -i '/<br \/>/d' {}
 
 # 【B. 修复系统前缀：确保 /etc/openwrt_release 内容正确】
-# 这一步保证“固件版本”行的前半部分显示为：Lede by ranqw R2026.04.15 @OpenWrt R26.02.20
 custom_description="Lede by ranqw R${build_date} @OpenWrt "
 sed -i "s/DISTRIB_DESCRIPTION='.*'/DISTRIB_DESCRIPTION='${custom_description}'/g" package/lean/default-settings/files/zzz-default-settings
 sed -i "s/DISTRIB_REVISION='.*'/DISTRIB_REVISION='${lean_r_ver}'/g" package/lean/default-settings/files/zzz-default-settings
 
-# 【C. 终极一击：直接修改 LuCI 源码，消灭 git-xxxx 分支信息】
+# 【C. 终极核弹：动态定位并直接清空全量写入 LuCI 版本源文件】
+# 抛弃 sed 匹配，直接用 echo 和 cat 把整个文件重写，无视源码模板变动
 
-# 1. 处理 23.05+ 的 ucode 架构 (feeds/luci/modules/luci-base/ucode/version.uc)
-# 原理：直接把原本由 luci.mk 动态生成的 revision 和 branch 替换为固定值
-if [ -f "feeds/luci/modules/luci-base/ucode/version.uc" ]; then
-    echo "正在修改 version.uc 以移除 Git 后缀..."
-    # 替换 revision 为 'Lede'，替换 branch 为 '- 24.10'
-    sed -i "s/revision = .*,/revision = 'Lede',/g" feeds/luci/modules/luci-base/ucode/version.uc
-    sed -i "s/branch = .*/branch = '- ${build_name}';/g" feeds/luci/modules/luci-base/ucode/version.uc
+# 1. 处理 23.05+ 的 ucode 架构
+UC_FILE=$(find feeds/luci/modules/luci-base/ -name "version.uc" | head -n 1)
+if [ -n "$UC_FILE" ]; then
+    echo "发现 version.uc，正在执行全量暴力覆盖..."
+    echo "export const branch = 'Lede', revision = '- ${build_name}';" > "$UC_FILE"
 fi
 
-# 2. 处理旧版 Lua 架构 (feeds/luci/modules/luci-base/luasrc/version.lua)
-if [ -f "feeds/luci/modules/luci-base/luasrc/version.lua" ]; then
-    echo "正在修改 version.lua 以兼容旧架构..."
-    sed -i "s/luciname    = .*/luciname    = 'Lede'/g" feeds/luci/modules/luci-base/luasrc/version.lua
-    sed -i "s/luciversion = .*/luciversion = '- ${build_name}'/g" feeds/luci/modules/luci-base/luasrc/version.lua
+# 2. 处理旧版 Lua 架构
+LUA_FILE=$(find feeds/luci/modules/luci-base/ -name "version.lua" | head -n 1)
+if [ -n "$LUA_FILE" ]; then
+    echo "发现 version.lua，正在执行全量暴力覆盖..."
+    cat << EOF > "$LUA_FILE"
+local pcall, dofile, _G = pcall, dofile, _G
+module "luci.version"
+if pcall(dofile, "/etc/openwrt_release") and _G.DISTRIB_DESCRIPTION then
+    distname    = ""
+    distversion = _G.DISTRIB_DESCRIPTION
+    if _G.DISTRIB_REVISION then
+        distrevision = _G.DISTRIB_REVISION
+        if not distversion:find(distrevision,1,true) then
+            distversion = distversion .. " " .. distrevision
+        end
+    end
+else
+    distname    = "OpenWrt"
+    distversion = "Development Snapshot"
+end
+luciname    = "Lede"
+luciversion = "- ${build_name}"
+EOF
 fi
 
-# 【清理之前的 JS 篡改，恢复原生拼合逻辑】
-# 既然我们已经把后端变量改好了，前端 JS 就会自动拼出 " / Lede - 24.10"
-git checkout feeds/luci/modules/luci-mod-system/htdocs/luci-static/resources/view/system/system.js 2>/dev/null
-git checkout feeds/luci/modules/luci-base/htdocs/luci-static/resources/luci.js 2>/dev/null
+# 【D. 拔除 luci-base Makefile 内部环境变量干扰】
+# 为了防止 Makefile 在 make install 阶段重新获取 Git 信息，强行拦截变量定义
+sed -i "s/PKG_VERSION_BRANCH:=.*/PKG_VERSION_BRANCH:=Lede/g" feeds/luci/modules/luci-base/Makefile 2>/dev/null
+sed -i "s/PKG_VERSION_REVISION:=.*/PKG_VERSION_REVISION:=- ${build_name}/g" feeds/luci/modules/luci-base/Makefile 2>/dev/null
 
 # =========================================================
 # 3. Argon 主题页脚动态渲染
