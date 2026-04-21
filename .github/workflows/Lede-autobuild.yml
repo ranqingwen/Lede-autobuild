@@ -2,6 +2,7 @@ name: Lede-autobuild
 
 permissions:
   contents: write
+  actions: write
 
 on:
   repository_dispatch:
@@ -16,6 +17,11 @@ on:
         description: '保留的 Workflow 运行记录数量'
         required: false
         default: '3'
+        type: string
+      keep_caches:
+        description: '保留的 Cache 数量'
+        required: false
+        default: '1'
         type: string
 
 # 定时触发开启开始编译(把下面两个#去掉开启,时间设置请看定时开启编译说明)
@@ -336,6 +342,32 @@ jobs:
         retain_days: 0
         keep_minimum_runs: ${{ github.event.inputs.keep_workflows || '10' }}
         
+    # 清理旧缓存，保留最新 N 个
+    - name: 清理旧的 Caches
+      # 即使编译失败也执行清理，除非任务被取消
+      if: (!cancelled())
+      run: |
+        # 设置保留数量：优先使用输入值，若为空（如定时触发）则默认保留 1 个
+        KEEP_NUM=${{ github.event.inputs.keep_caches || '1' }}
+        
+        echo "正在检查缓存管理 (当前设定保留: $KEEP_NUM)..."
+        
+        # 获取需要删除的缓存 ID 列表
+        # 逻辑：按创建时间倒序排列，跳过前 $KEEP_NUM 个，提取剩余 ID
+        ids=$(gh cache list --limit 100 --order desc --json id -q ".[$KEEP_NUM:][].id")
+        
+        if [ -z "$ids" ]; then
+          echo "✅ 没有需要清理的旧缓存。"
+        else
+          echo "🧹 发现旧缓存，准备删除..."
+          for id in $ids; do
+            gh cache delete $id
+            echo "已删除缓存 ID: $id"
+          done
+          echo "✅ 清理完毕。"
+        fi
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
     - name: 编译成功，发Telegram通知
       if: success() && env.TELEGRAM_WORK_PUSH == 'true'
