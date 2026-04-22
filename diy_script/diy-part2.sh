@@ -42,81 +42,82 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/*/Make
 # 更改argon主题背景
 cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
 
+#!/bin/bash
+
+#!/bin/bash
+
 # =========================================================
 # 1. 统一变量定义
 # =========================================================
 build_date=$(date +%Y.%m.%d)
 build_name="24.10"
 
-# 动态抓取源码原始版本号 (例如 R26.02.20)
+# 动态抓取源码原始修订号 (R26.xx.xx)
 lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
 [ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
 
+# 构造完整的描述字符串：这里一定要包含 ${lean_r_ver}
+custom_description="Lede by ranqw R${build_date} @OpenWrt ${lean_r_ver}"
+
 # =========================================================
-# 2. 彻底解决显示后缀和边框问题 (终极全量覆写源文件法)
+# 2. 修正固件版本显示 & 移除“边框”（换行符）
 # =========================================================
 
-# 【A. 阻止 Lean 的 autocore 在编译期强行注入换行符 <br />】
-find package/lean/autocore/ -type f -name "Makefile" | xargs -i sed -i '/<br \/>/d' {}
+# 【A. 彻底清理 autocore 的换行符】
+# 之前只改了 Makefile 是不够的，必须清理 autocore 源码中所有可能注入 <br /> 的地方
+# 这能解决你看到的“边框/错位”问题
+find package/lean/autocore/ -type f | xargs -i sed -i 's/<br \/>//g' {}
 
-# 【B. 修复系统前缀：确保 /etc/openwrt_release 内容正确】
-custom_description="Lede by ranqw R${build_date} @OpenWrt "
+# 【B. 修正系统描述 /etc/openwrt_release】
 sed -i "s/DISTRIB_DESCRIPTION='.*'/DISTRIB_DESCRIPTION='${custom_description}'/g" package/lean/default-settings/files/zzz-default-settings
-sed -i "s/DISTRIB_REVISION='.*'/DISTRIB_REVISION='${lean_r_ver}'/g" package/lean/default-settings/files/zzz-default-settings
+# 将 REVISION 设为空或者特定字符，防止 LuCI 在后面二次拼接导致重复显示
+sed -i "s/DISTRIB_REVISION='.*'/DISTRIB_REVISION=''/g" package/lean/default-settings/files/zzz-default-settings
 
-# 【C. 终极核弹：动态定位并直接清空全量写入 LuCI 版本源文件】
-# 抛弃 sed 匹配，直接用 echo 和 cat 把整个文件重写，无视源码模板变动
-
-# 1. 处理 23.05+ 的 ucode 架构
+# 【C. 暴力覆盖 LuCI 版本文件 - 解决 25.12 顽固显示】
+# 处理 ucode 架构 (version.uc)
 UC_FILE=$(find feeds/luci/modules/luci-base/ -name "version.uc" | head -n 1)
 if [ -n "$UC_FILE" ]; then
-    echo "发现 version.uc，正在执行全量暴力覆盖..."
     echo "export const branch = 'Lede', revision = '- ${build_name}';" > "$UC_FILE"
 fi
 
-# 2. 处理旧版 Lua 架构
+# 处理 Lua 架构 (version.lua)
 LUA_FILE=$(find feeds/luci/modules/luci-base/ -name "version.lua" | head -n 1)
 if [ -n "$LUA_FILE" ]; then
-    echo "发现 version.lua，正在执行全量暴力覆盖..."
     cat << EOF > "$LUA_FILE"
 local pcall, dofile, _G = pcall, dofile, _G
 module "luci.version"
 if pcall(dofile, "/etc/openwrt_release") and _G.DISTRIB_DESCRIPTION then
-    distname    = ""
-    distversion = _G.DISTRIB_DESCRIPTION
-    if _G.DISTRIB_REVISION then
-        distrevision = _G.DISTRIB_REVISION
-        if not distversion:find(distrevision,1,true) then
-            distversion = distversion .. " " .. distrevision
-        end
-    end
+	distname    = ""
+	distversion = _G.DISTRIB_DESCRIPTION
+	if _G.DISTRIB_REVISION and _G.DISTRIB_REVISION ~= "" then
+		distrevision = _G.DISTRIB_REVISION
+		if not distversion:find(distrevision,1,true) then
+			distversion = distversion .. " " .. distrevision
+		end
+	end
 else
-    distname    = "OpenWrt"
-    distversion = "Development Snapshot"
+	distname    = "OpenWrt"
+	distversion = "Development Snapshot"
 end
 luciname    = "Lede"
 luciversion = "- ${build_name}"
 EOF
 fi
 
-# 【D. 拔除 luci-base Makefile 内部环境变量干扰】
-# 为了防止 Makefile 在 make install 阶段重新获取 Git 信息，强行拦截变量定义
+# 【D. 拦截 Makefile 变量】
 sed -i "s/PKG_VERSION_BRANCH:=.*/PKG_VERSION_BRANCH:=Lede/g" feeds/luci/modules/luci-base/Makefile 2>/dev/null
 sed -i "s/PKG_VERSION_REVISION:=.*/PKG_VERSION_REVISION:=- ${build_name}/g" feeds/luci/modules/luci-base/Makefile 2>/dev/null
 
 # =========================================================
-# 3. Argon 主题页脚动态渲染
+# 3. Argon 主题页脚动态渲染 (保持你之前的逻辑不变)
 # =========================================================
-# 覆盖页脚模板文件
 cp -f $GITHUB_WORKSPACE/personal/argon/footer.ut package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 cp -f $GITHUB_WORKSPACE/personal/argon/footer_login.ut package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 
-# 渲染 footer.ut
 sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 
-# 渲染 footer_login.ut
 sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
