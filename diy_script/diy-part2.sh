@@ -166,11 +166,24 @@ fi
 rm -rf dl/ustream-ssl-*
 rm -rf build_dir/target-*/ustream-ssl-*
 
-# 移除fchomo和nikki
-rm -rf feeds/luci/applications/luci-app-fchomo
-rm -rf feeds/luci/applications/luci-app-nikki
-rm -rf package/feeds/luci/luci-app-fchomo
-rm -rf package/feeds/luci/luci-app-nikki
+# =========================================================
+# 4. 彻底解决 fchomo 和 nikki 导致的递归依赖循环
+# =========================================================
+echo ">>> 正在强制清理冲突插件..."
+
+# 1. 使用 find 命令全局查找并删除，确保无论是哪个 feed 里的都被删掉
+find ./feeds/ -type d -name "luci-app-fchomo" | xargs rm -rf
+find ./feeds/ -type d -name "luci-app-nikki" | xargs rm -rf
+find ./feeds/ -type d -name "nikki" | xargs rm -rf
+find ./package/feeds/ -type d -name "luci-app-fchomo" | xargs rm -rf
+find ./package/feeds/ -type d -name "luci-app-nikki" | xargs rm -rf
+find ./package/feeds/ -type d -name "nikki" | xargs rm -rf
+
+# 2. 关键一步：强制删除 tmp 目录，清除已损坏的依赖索引
+# 如果不删 tmp，即便删了插件，系统可能还会报递归错误
+rm -rf tmp
+
+echo ">>> 冲突插件清理完成。"
 
 # rm -rf feeds/luci/applications/luci-app-quickstart
 # rm -rf feeds/packages/utils/luci-app-partexp
