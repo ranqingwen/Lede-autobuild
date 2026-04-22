@@ -54,7 +54,7 @@ build_name="24.10"
 
 # 动态抓取源码原始修订号 (R26.xx.xx)
 lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
-[ -z "$lean_r_ver" ] && lean_r_ver="R26.02.20"
+[ -z "$lean_r_ver" ] && lean_r_ver="R2026.02.20"
 
 # 构造完整的描述字符串：这里一定要包含 ${lean_r_ver}
 custom_description="Lede by ranqw R${build_date} @OpenWrt ${lean_r_ver}"
