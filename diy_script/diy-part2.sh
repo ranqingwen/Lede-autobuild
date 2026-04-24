@@ -81,7 +81,7 @@ cat << EOF > package/base-files/files/etc/uci-defaults/99-fix-luci-version
 #!/bin/sh
 # 暴力覆盖 ucode 架构 (将值全部塞给 revision，branch 置空，防截断)
 if [ -f /usr/share/ucode/luci/version.uc ]; then
-    echo "export const revision = 'Lede - ${build_name}', branch = '';" > /usr/share/ucode/luci/version.uc
+    echo "export const revision = '', branch = 'Lede - ${build_name}';" > /usr/share/ucode/luci/version.uc
 fi
 # 暴力覆盖 lua 架构 (向下兼容)
 if [ -f /usr/lib/lua/luci/version.lua ]; then
