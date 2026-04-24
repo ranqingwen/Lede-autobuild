@@ -17,4 +17,4 @@ else
 end
 
 luciname    = "Lede"
-luciversion = "24.10"
+luciversion = "${build_name}"

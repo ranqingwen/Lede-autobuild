@@ -62,49 +62,69 @@ lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-setti
 
 # 【A. 消除“下边框”和多余换行】
 # autocore 喜欢往页面注入 <br /> 换行 和 <hr /> 分割线，这是产生下边框的罪魁祸首
-find package/lean/autocore/ -type f -exec sed -i 's/<br \/>//g' {} +
-find package/lean/autocore/ -type f -exec sed -i 's/<hr \/>//g' {} +
-find package/lean/autocore/ -type f -exec sed -i 's/<hr>//g' {} +
+#find package/lean/autocore/ -type f -exec sed -i 's/<br \/>//g' {} +
+#find package/lean/autocore/ -type f -exec sed -i 's/<hr \/>//g' {} +
+#find package/lean/autocore/ -type f -exec sed -i 's/<hr>//g' {} +
 
 # 【B. 修复系统描述 (前缀)】
 # 保证前半截显示为：Lede by ranqw R2026.04.23 @OpenWrt R26.02.20
-custom_description="Lede by ranqw R${build_date} @OpenWrt ${lean_r_ver}"
-sed -i "s/DISTRIB_DESCRIPTION='.*'/DISTRIB_DESCRIPTION='${custom_description}'/g" package/lean/default-settings/files/zzz-default-settings
+#custom_description="Lede by ranqw R${build_date} @OpenWrt ${lean_r_ver}"
+#sed -i "s/DISTRIB_DESCRIPTION='.*'/DISTRIB_DESCRIPTION='${custom_description}'/g" package/lean/default-settings/#files/zzz-default-settings
 # 将系统自带的 REVISION 置空，防止系统在后面画蛇添足再拼一个 R26.02.20
-sed -i "s/DISTRIB_REVISION='.*'/DISTRIB_REVISION=''/g" package/lean/default-settings/files/zzz-default-settings
+#sed -i "s/DISTRIB_REVISION='.*'/DISTRIB_REVISION=''/g" package/lean/default-settings/files/zzz-default-settings
 
 # 【C. 终极截断：开机物理覆盖】
 # 源码 Make 机制太过霸道，会导致源文件在打包阶段被还原。
 # 利用 uci-defaults 在系统开机挂载可写分区后，强行整件覆写。
-mkdir -p package/base-files/files/etc/uci-defaults
-cat << EOF > package/base-files/files/etc/uci-defaults/99-fix-luci-version
+#mkdir -p package/base-files/files/etc/uci-defaults
+#cat << EOF > package/base-files/files/etc/uci-defaults/99-fix-luci-version
 #!/bin/sh
 # 暴力覆盖 ucode 架构 (将值全部塞给 revision，branch 置空，防截断)
-if [ -f /usr/share/ucode/luci/version.uc ]; then
-    echo "export const revision = '', branch = 'Lede - ${build_name}';" > /usr/share/ucode/luci/version.uc
-fi
+#if [ -f /usr/share/ucode/luci/version.uc ]; then
+#    echo "export const revision = '', branch = 'Lede - ${build_name}';" > /usr/share/ucode/luci/version.uc
+#fi
 # 暴力覆盖 lua 架构 (向下兼容)
-if [ -f /usr/lib/lua/luci/version.lua ]; then
-    sed -i 's/luciname.*/luciname    = "Lede"/g' /usr/lib/lua/luci/version.lua
-    sed -i 's/luciversion.*/luciversion = "${build_name}"/g' /usr/lib/lua/luci/version.lua
-fi
-exit 0
-EOF
-chmod +x package/base-files/files/etc/uci-defaults/99-fix-luci-version
+#if [ -f /usr/lib/lua/luci/version.lua ]; then
+#    sed -i 's/luciname.*/luciname    = "Lede"/g' /usr/lib/lua/luci/version.lua
+#    sed -i 's/luciversion.*/luciversion = "${build_name}"/g' /usr/lib/lua/luci/version.lua
+#fi
+#exit 0
+#EOF
+#chmod +x package/base-files/files/etc/uci-defaults/99-fix-luci-version
 
 # =========================================================
 # 3. Argon 主题页脚动态渲染 (保持你之前的逻辑不变)
 # =========================================================
-cp -f $GITHUB_WORKSPACE/personal/argon/footer.ut package/luci-theme-argon/ucode/template/themes/argon/footer.ut
-cp -f $GITHUB_WORKSPACE/personal/argon/footer_login.ut package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+#cp -f $GITHUB_WORKSPACE/personal/argon/footer.ut package/luci-theme-argon/ucode/template/themes/argon/footer.ut
+#cp -f $GITHUB_WORKSPACE/personal/argon/footer_login.ut package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 
-sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
-sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
-sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
+#sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
+#sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
+#sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer.ut
 
-sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
-sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
-sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+#sed -i "s|\${build_name}|${build_name}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+#sed -i "s|\${build_date}|${build_date}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+#sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
+
+# =========================================================
+# 1. 强制替换系统版本核心文件 (Version Injection)
+# =========================================================
+
+# 强制覆盖 Lua (旧版) 和 ucode (现代源码) 的版本定义文件
+cp -f $GITHUB_WORKSPACE/personal/version/version.lua feeds/luci/modules/luci-base/luasrc/version.lua
+cp -f $GITHUB_WORKSPACE/personal/version/version.uc feeds/luci/modules/luci-base/ucode/version.uc
+
+# 强制注入变量到 version.lua 和 version.uc 中的 ${build_name} 占位符
+sed -i "s|\${build_name}|${build_name}|g" feeds/luci/modules/luci-base/luasrc/version.lua
+sed -i "s|\${build_name}|${build_name}|g" feeds/luci/modules/luci-base/ucode/version.uc
+
+
+# =========================================================
+# 2. 强制处理 Argon 主题页脚 (Theme Footer)
+# =========================================================
+
+#. 强制将你编辑好的 footer.htm 拷贝到位
+cp -f $GITHUB_WORKSPACE/personal/argon/footer.htm package/luci-theme-argon/ucode/template/themes/argon/footer.htm
 
 # 修改欢迎banner
 cp -f $GITHUB_WORKSPACE/personal/banner package/base-files/files/etc/banner

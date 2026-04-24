@@ -1,1 +1,1 @@
-export const revision = '', branch = 'Lede - 24.10';
+export const revision = '', branch = 'Lede - ${build_name}';
