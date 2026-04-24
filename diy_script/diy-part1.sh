@@ -36,8 +36,12 @@ EOF
 # 添加 argon 主题
 rm -rf feeds/luci/themes/luci-theme-argon
 rm -rf feeds/luci/applications/luci-app-argon-config
-git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
-git clone https://github.com/jerrykuku/luci-app-argon-config.git package/luci-app-argon-config
+rm -rf package/luci-theme-argon
+rm -rf package/luci-app-argon-config
+#git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
+#git clone https://github.com/jerrykuku/luci-app-argon-config.git package/luci-app-argon-config
+git clone -b master --depth 1 https://github.com/ranqingwen/luci-theme-argon.git package/luci-theme-argon
+git clone -b argon-config --depth 1 https://github.com/ranqingwen/luci-theme-argon.git package/luci-app-argon-config
 
 # 添加 Lucky
 git clone https://github.com/gdy666/luci-app-lucky.git package/lucky
