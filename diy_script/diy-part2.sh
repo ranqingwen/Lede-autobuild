@@ -75,18 +75,18 @@ sed -i "s/DISTRIB_REVISION='.*'/DISTRIB_REVISION=''/g" package/lean/default-sett
 
 # 【C. 终极截断：开机物理覆盖】
 # 源码 Make 机制太过霸道，会导致源文件在打包阶段被还原。
-# 最佳方案是利用 uci-defaults，在系统开机挂载可写分区后，强行整件覆写。
+# 利用 uci-defaults 在系统开机挂载可写分区后，强行整件覆写。
 mkdir -p package/base-files/files/etc/uci-defaults
 cat << EOF > package/base-files/files/etc/uci-defaults/99-fix-luci-version
 #!/bin/sh
-# 暴力覆盖 ucode 架构 (专治 23.05 / 25.12 的版号顽疾)
+# 暴力覆盖 ucode 架构 (将值全部塞给 revision，branch 置空，防截断)
 if [ -f /usr/share/ucode/luci/version.uc ]; then
-    echo "export const branch = 'Lede', revision = '- ${build_name}';" > /usr/share/ucode/luci/version.uc
+    echo "export const revision = 'Lede - ${build_name}', branch = '';" > /usr/share/ucode/luci/version.uc
 fi
 # 暴力覆盖 lua 架构 (向下兼容)
 if [ -f /usr/lib/lua/luci/version.lua ]; then
     sed -i 's/luciname.*/luciname    = "Lede"/g' /usr/lib/lua/luci/version.lua
-    sed -i 's/luciversion.*/luciversion = "- ${build_name}"/g' /usr/lib/lua/luci/version.lua
+    sed -i 's/luciversion.*/luciversion = "${build_name}"/g' /usr/lib/lua/luci/version.lua
 fi
 exit 0
 EOF
