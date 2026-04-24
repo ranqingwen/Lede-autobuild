@@ -56,57 +56,41 @@ build_name="24.10"
 lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-settings/files/zzz-default-settings | head -n1)
 [ -z "$lean_r_ver" ] && lean_r_ver="R2026.02.20"
 
-# 构造完整的描述字符串：这里一定要包含 ${lean_r_ver}
+# =========================================================
+# 2. 彻底解决显示后缀和边框问题 (终极防御体系)
+# =========================================================
+
+# 【A. 消除“下边框”和多余换行】
+# autocore 喜欢往页面注入 <br /> 换行 和 <hr /> 分割线，这是产生下边框的罪魁祸首
+find package/lean/autocore/ -type f -exec sed -i 's/<br \/>//g' {} +
+find package/lean/autocore/ -type f -exec sed -i 's/<hr \/>//g' {} +
+find package/lean/autocore/ -type f -exec sed -i 's/<hr>//g' {} +
+
+# 【B. 修复系统描述 (前缀)】
+# 保证前半截显示为：Lede by ranqw R2026.04.23 @OpenWrt R26.02.20
 custom_description="Lede by ranqw R${build_date} @OpenWrt ${lean_r_ver}"
-
-# =========================================================
-# 2. 修正固件版本显示 & 移除“边框”（换行符）
-# =========================================================
-
-# 【A. 彻底清理 autocore 的换行符】
-# 之前只改了 Makefile 是不够的，必须清理 autocore 源码中所有可能注入 <br /> 的地方
-# 这能解决你看到的“边框/错位”问题
-find package/lean/autocore/ -type f | xargs -i sed -i 's/<br \/>//g' {}
-
-# 【B. 修正系统描述 /etc/openwrt_release】
 sed -i "s/DISTRIB_DESCRIPTION='.*'/DISTRIB_DESCRIPTION='${custom_description}'/g" package/lean/default-settings/files/zzz-default-settings
-# 将 REVISION 设为空或者特定字符，防止 LuCI 在后面二次拼接导致重复显示
+# 将系统自带的 REVISION 置空，防止系统在后面画蛇添足再拼一个 R26.02.20
 sed -i "s/DISTRIB_REVISION='.*'/DISTRIB_REVISION=''/g" package/lean/default-settings/files/zzz-default-settings
 
-# 【C. 暴力覆盖 LuCI 版本文件 - 解决 25.12 顽固显示】
-# 处理 ucode 架构 (version.uc)
-UC_FILE=$(find feeds/luci/modules/luci-base/ -name "version.uc" | head -n 1)
-if [ -n "$UC_FILE" ]; then
-    echo "export const branch = 'Lede', revision = '- ${build_name}';" > "$UC_FILE"
+# 【C. 终极截断：开机物理覆盖】
+# 源码 Make 机制太过霸道，会导致源文件在打包阶段被还原。
+# 最佳方案是利用 uci-defaults，在系统开机挂载可写分区后，强行整件覆写。
+mkdir -p package/base-files/files/etc/uci-defaults
+cat << EOF > package/base-files/files/etc/uci-defaults/99-fix-luci-version
+#!/bin/sh
+# 暴力覆盖 ucode 架构 (专治 23.05 / 25.12 的版号顽疾)
+if [ -f /usr/share/ucode/luci/version.uc ]; then
+    echo "export const branch = 'Lede', revision = '- ${build_name}';" > /usr/share/ucode/luci/version.uc
 fi
-
-# 处理 Lua 架构 (version.lua)
-LUA_FILE=$(find feeds/luci/modules/luci-base/ -name "version.lua" | head -n 1)
-if [ -n "$LUA_FILE" ]; then
-    cat << EOF > "$LUA_FILE"
-local pcall, dofile, _G = pcall, dofile, _G
-module "luci.version"
-if pcall(dofile, "/etc/openwrt_release") and _G.DISTRIB_DESCRIPTION then
-	distname    = ""
-	distversion = _G.DISTRIB_DESCRIPTION
-	if _G.DISTRIB_REVISION and _G.DISTRIB_REVISION ~= "" then
-		distrevision = _G.DISTRIB_REVISION
-		if not distversion:find(distrevision,1,true) then
-			distversion = distversion .. " " .. distrevision
-		end
-	end
-else
-	distname    = "OpenWrt"
-	distversion = "Development Snapshot"
-end
-luciname    = "Lede"
-luciversion = "- ${build_name}"
+# 暴力覆盖 lua 架构 (向下兼容)
+if [ -f /usr/lib/lua/luci/version.lua ]; then
+    sed -i 's/luciname.*/luciname    = "Lede"/g' /usr/lib/lua/luci/version.lua
+    sed -i 's/luciversion.*/luciversion = "- ${build_name}"/g' /usr/lib/lua/luci/version.lua
+fi
+exit 0
 EOF
-fi
-
-# 【D. 拦截 Makefile 变量】
-sed -i "s/PKG_VERSION_BRANCH:=.*/PKG_VERSION_BRANCH:=Lede/g" feeds/luci/modules/luci-base/Makefile 2>/dev/null
-sed -i "s/PKG_VERSION_REVISION:=.*/PKG_VERSION_REVISION:=- ${build_name}/g" feeds/luci/modules/luci-base/Makefile 2>/dev/null
+chmod +x package/base-files/files/etc/uci-defaults/99-fix-luci-version
 
 # =========================================================
 # 3. Argon 主题页脚动态渲染 (保持你之前的逻辑不变)
