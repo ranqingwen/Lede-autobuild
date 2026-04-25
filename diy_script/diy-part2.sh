@@ -107,24 +107,41 @@ lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-setti
 #sed -i "s|\${lean_r_ver}|${lean_r_ver}|g" package/luci-theme-argon/ucode/template/themes/argon/footer_login.ut
 
 # =========================================================
-# 1. 强制替换系统版本核心文件 (Version Injection)
+# 1. 强制替换系统版本核心文件 (Version Injection - LUA & UC)
 # =========================================================
 
-# 强制覆盖 Lua (旧版) 和 ucode (现代源码) 的版本定义文件
-cp -f $GITHUB_WORKSPACE/personal/version/version.lua feeds/luci/modules/luci-base/luasrc/version.lua
-cp -f $GITHUB_WORKSPACE/personal/version/version.uc feeds/luci/modules/luci-base/ucode/version.uc
+# 强行创建父目录，确保 cp 和 sed 命令不会报错
+mkdir -p feeds/luci/modules/luci-base/luasrc/
+mkdir -p feeds/luci/modules/luci-base/ucode/
 
-# 强制注入变量到 version.lua 和 version.uc 中的 ${build_name} 占位符
+# 1.1 替换 Lua 版本文件 (针对传统 Lua 界面)
+cp -f $GITHUB_WORKSPACE/personal/version/version.lua feeds/luci/modules/luci-base/luasrc/version.lua
 sed -i "s|\${build_name}|${build_name}|g" feeds/luci/modules/luci-base/luasrc/version.lua
+
+# 1.2 替换 UC 版本文件 (针对现代 ucode 界面)
+# 这步解决了你提到的 uc 文件替换需求
+cp -f $GITHUB_WORKSPACE/personal/version/version.uc feeds/luci/modules/luci-base/ucode/version.uc
 sed -i "s|\${build_name}|${build_name}|g" feeds/luci/modules/luci-base/ucode/version.uc
 
 
 # =========================================================
-# 2. 强制处理 Argon 主题页脚 (Theme Footer)
+# 2. 强制替换 Argon 主题页脚 (Lua 架构路径校准)
 # =========================================================
 
-#. 强制将你编辑好的 footer.htm 拷贝到位
-cp -f $GITHUB_WORKSPACE/personal/argon/footer.htm package/luci-theme-argon/ucode/template/themes/argon/footer.htm
+# 你的源码路径确认是：package/luci-theme-argon/luasrc/view/themes/argon/
+ARGON_DIR="package/luci-theme-argon/luasrc/view/themes/argon"
+
+# 强行创建主题模板目录
+mkdir -p $ARGON_DIR
+
+# 强行覆盖 footer.htm
+cp -f $GITHUB_WORKSPACE/personal/argon/footer.htm $ARGON_DIR/footer.htm
+
+# 核心逻辑对齐：
+# 你的 footer.htm 默认读取 <%= ver.distversion %>
+# 但你在 version.lua 中将自定义名称赋值给了 luciversion
+# 必须执行下面这一行，右下角才会真正显示你定义的 "${build_name}"
+sed -i 's|<%= ver.distversion %>|<%= ver.luciversion %>|g' $ARGON_DIR/footer.htm
 
 # 修改欢迎banner
 cp -f $GITHUB_WORKSPACE/personal/banner package/base-files/files/etc/banner
