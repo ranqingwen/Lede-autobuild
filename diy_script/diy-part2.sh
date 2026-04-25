@@ -42,9 +42,6 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/*/Make
 # 更改argon主题背景
 cp -f $GITHUB_WORKSPACE/personal/bg1.jpg package/luci-theme-argon/htdocs/luci-static/argon/img/bg1.jpg
 
-#!/bin/bash
-
-#!/bin/bash
 
 # =========================================================
 # 1. 统一变量定义
@@ -64,7 +61,7 @@ lean_r_ver=$(grep -oE "R[0-9]{2}\.[0-9]{2}\.[0-9]{2}" package/lean/default-setti
 # 【B. 修复系统描述 (前缀)】
 # 保证前半截显示为：Lede by ranqw R2026.04.23 @OpenWrt R26.02.20
 custom_description="Lede by ranqw R${build_date} @OpenWrt ${lean_r_ver}"
-sed -i "s/DISTRIB_DESCRIPTION='.*'/DISTRIB_DESCRIPTION='${custom_description}'/g" package/lean/default-settings/#files/zzz-default-settings
+sed -i "s/DISTRIB_DESCRIPTION='.*'/DISTRIB_DESCRIPTION='${custom_description}'/g" package/lean/default-settings/files/zzz-default-settings
 # 将系统自带的 REVISION 置空，防止系统在后面画蛇添足再拼一个 R26.02.20
 sed -i "s/DISTRIB_REVISION='.*'/DISTRIB_REVISION=''/g" package/lean/default-settings/files/zzz-default-settings
 
@@ -189,11 +186,12 @@ echo ">>> 冲突插件清理完成。"
 # rm -rf feeds/packages/utils/luci-app-partexp
 
 # 移除 default-settings 中的 UPnP
-find package/feeds -type f | xargs sed -i -e '/luci-app-upnp/d' -e '/luci-i18n-upnp/d' -e '/miniupnpd/d'
+#find package/feeds -type f | xargs sed -i -e '/luci-app-upnp/d' -e '/luci-i18n-upnp/d' -e '/miniupnpd/d'
+find package/feeds -type f | xargs -r sed -i -e '/luci-app-upnp/d' -e '/luci-i18n-upnp/d' -e '/miniupnpd/d'
 sed -i '/luci-app-upnp/d' package/Makefile
 sed -i '/luci-i18n-upnp/d' package/Makefile
 sed -i '/miniupnpd/d' package/Makefile
-rm -f tmp/.package_install
+#rm -f tmp/.package_install
 
 # 修复 default-settings 问题
 echo ">>> Purge default-settings (all variants)"
